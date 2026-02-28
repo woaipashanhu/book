@@ -1844,9 +1844,20 @@
                 let pagesToUse = requestedPages.length > 0 ? requestedPages : [currentPage];
 
                 pagesToUse.forEach(p => {
-                    pageContent += `\n\n=== 第${p}页 ===\n${pageTexts[p] || ''}`;
+                    const pageText = pageTexts[p] || '';
+                    console.log(`第${p}页文本长度:`, pageText.length);
+                    pageContent += `\n\n=== 第${p}页 ===\n${pageText}`;
                 });
 
+                // 检查是否有有效文本
+                const trimmedContent = pageContent.replace(/[\s\-=]/g, '').trim();
+                if (!trimmedContent) {
+                    loadingDiv.remove();
+                    addMessageToUI('assistant', '⚠️ 该PDF可能是扫描版（图片），无法提取文字内容。请尝试上传文字版PDF，或手动输入你想了解的内容。', '系统提示');
+                    return;
+                }
+
+                console.log('发送给AI的内容长度:', pageContent.length);
                 const response = await callModelAPI(modelId, actualMessage, pageContent, pagesToUse);
 
                 loadingDiv.remove();
