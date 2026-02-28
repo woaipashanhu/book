@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; worker-src 'self' blob: https://unpkg.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; connect-src 'self' https:; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline';">
     <title>PDF智能对话助手</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1a1a2e">
@@ -1215,12 +1216,19 @@
     <div class="toast" id="toast"></div>
 
     <script>
-        // 等待 pdfjsLib 加载完成
+        // 等待 pdfjsLib 加载完成并设置 worker
         function initPdfJs() {
             if (typeof pdfjsLib !== 'undefined') {
-                // 设置 worker 源，使用 jsdelivr（国内访问较好）
-                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
-                console.log('PDF.js Worker 配置完成');
+                // Worker 备用源列表
+                const workerUrls = [
+                    'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js',
+                    'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js',
+                    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
+                ];
+                
+                // 使用第一个可用的 worker 源
+                pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrls[0];
+                console.log('PDF.js Worker 配置完成:', workerUrls[0]);
             } else {
                 // 如果还没加载完，等待100ms再试
                 setTimeout(initPdfJs, 100);
