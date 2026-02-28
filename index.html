@@ -1,0 +1,1369 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>PDF智能对话助手</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1a1a2e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #0f0f1a;
+            color: #e0e0e0;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* 书架视图 */
+        #bookshelf {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        .bookshelf-header {
+            text-align: center;
+            padding: 20px 0 30px;
+        }
+
+        .bookshelf-header h1 {
+            font-size: 24px;
+            color: #fff;
+            margin-bottom: 8px;
+        }
+
+        .bookshelf-header p {
+            font-size: 14px;
+            color: #888;
+        }
+
+        .upload-area {
+            border: 2px dashed #444;
+            border-radius: 16px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .upload-area:hover {
+            border-color: #6c5ce7;
+            background: rgba(108, 92, 231, 0.1);
+        }
+
+        .upload-area input {
+            display: none;
+        }
+
+        .upload-icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+
+        .books-grid {
+            flex: 1;
+            overflow-y: auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            padding-bottom: 20px;
+        }
+
+        .book-card {
+            background: #1a1a2e;
+            border-radius: 12px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .book-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .book-card .book-icon {
+            font-size: 40px;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .book-card .book-title {
+            font-size: 14px;
+            font-weight: 500;
+            text-align: center;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .book-card .book-date {
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+            margin-top: 5px;
+        }
+
+        .book-card .delete-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: #ff4757;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            font-size: 12px;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .book-card:hover .delete-btn {
+            opacity: 1;
+        }
+
+        /* 阅读视图 */
+        #reader {
+            display: none;
+            height: 100vh;
+            flex-direction: column;
+        }
+
+        .reader-header {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            background: #1a1a2e;
+            gap: 10px;
+        }
+
+        .back-btn {
+            background: none;
+            border: none;
+            color: #e0e0e0;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 5px;
+        }
+
+        .reader-title {
+            flex: 1;
+            font-size: 16px;
+            font-weight: 500;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .settings-btn {
+            background: none;
+            border: none;
+            color: #e0e0e0;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 5px;
+        }
+
+        /* PDF显示区域 */
+        .pdf-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .page-display {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            overflow-y: auto;
+            background: #16213e;
+        }
+
+        .page-canvas-wrapper {
+            max-width: 100%;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        #pdfCanvas {
+            display: block;
+            max-width: 100%;
+            height: auto;
+        }
+
+        .page-nav {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            background: #1a1a2e;
+        }
+
+        .page-nav button {
+            background: #6c5ce7;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .page-nav button:disabled {
+            background: #444;
+            cursor: not-allowed;
+        }
+
+        .page-nav span {
+            font-size: 14px;
+            color: #888;
+        }
+
+        .page-selector {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .page-selector input {
+            width: 50px;
+            padding: 8px;
+            border: 1px solid #444;
+            border-radius: 6px;
+            background: #0f0f1a;
+            color: #e0e0e0;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        /* 聊天区域 */
+        .chat-container {
+            height: 40vh;
+            display: flex;
+            flex-direction: column;
+            background: #1a1a2e;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            max-width: 90%;
+        }
+
+        .message.user {
+            margin-left: auto;
+        }
+
+        .message-content {
+            padding: 12px 16px;
+            border-radius: 16px;
+            font-size: 15px;
+            line-height: 1.5;
+        }
+
+        .message.user .message-content {
+            background: #6c5ce7;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.assistant .message-content {
+            background: #2d2d44;
+            color: #e0e0e0;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message.assistant {
+            margin-right: auto;
+        }
+
+        .model-tag {
+            font-size: 11px;
+            color: #6c5ce7;
+            margin-bottom: 4px;
+        }
+
+        .message-loading {
+            display: flex;
+            gap: 4px;
+            padding: 12px 16px;
+        }
+
+        .message-loading span {
+            width: 8px;
+            height: 8px;
+            background: #6c5ce7;
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out;
+        }
+
+        .message-loading span:nth-child(1) { animation-delay: -0.32s; }
+        .message-loading span:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+
+        /* 输入区域 */
+        .input-area {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 15px;
+            background: #0f0f1a;
+            border-top: 1px solid #333;
+        }
+
+        .input-wrapper {
+            flex: 1;
+            position: relative;
+        }
+
+        #promptInput {
+            width: 100%;
+            padding: 12px 50px 12px 16px;
+            border: 1px solid #444;
+            border-radius: 24px;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            font-size: 15px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        #promptInput:focus {
+            border-color: #6c5ce7;
+        }
+
+        .voice-btn {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 20px;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .voice-btn:hover, .voice-btn.recording {
+            color: #6c5ce7;
+        }
+
+        #sendBtn {
+            background: #6c5ce7;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 24px;
+            font-size: 15px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        #sendBtn:hover {
+            background: #5b4cdb;
+        }
+
+        #sendBtn:disabled {
+            background: #444;
+            cursor: not-allowed;
+        }
+
+        /* 模型选择器 */
+        .model-selector {
+            display: none;
+            position: absolute;
+            bottom: 100%;
+            left: 0;
+            right: 0;
+            background: #1a1a2e;
+            border: 1px solid #444;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .model-selector.show {
+            display: block;
+        }
+
+        .model-option {
+            padding: 12px 16px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .model-option:hover {
+            background: #2d2d44;
+        }
+
+        .model-option .model-name {
+            font-weight: 500;
+            margin-bottom: 2px;
+        }
+
+        .model-option .model-desc {
+            font-size: 12px;
+            color: #888;
+        }
+
+        /* 设置弹窗 */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal {
+            background: #1a1a2e;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 400px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid #333;
+        }
+
+        .modal-header h2 {
+            font-size: 18px;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .api-key-group {
+            margin-bottom: 20px;
+        }
+
+        .api-key-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: #e0e0e0;
+        }
+
+        .api-key-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #444;
+            border-radius: 8px;
+            background: #0f0f1a;
+            color: #e0e0e0;
+            font-size: 14px;
+        }
+
+        .modal-footer {
+            padding: 20px;
+            border-top: 1px solid #333;
+        }
+
+        .modal-footer button {
+            width: 100%;
+            padding: 14px;
+            background: #6c5ce7;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .modal-footer button:hover {
+            background: #5b4cdb;
+        }
+
+        /* 滚动到底部按钮 */
+        .scroll-bottom-btn {
+            display: none;
+            position: absolute;
+            bottom: 70px;
+            right: 20px;
+            background: #6c5ce7;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            font-size: 18px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(108, 92, 231, 0.4);
+            z-index: 50;
+        }
+
+        .scroll-bottom-btn.show {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* 页面选择弹窗 */
+        .page-select-modal {
+            max-width: 350px;
+        }
+
+        .page-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .page-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid #333;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .page-item:hover {
+            background: #2d2d44;
+        }
+
+        .page-item.selected {
+            background: rgba(108, 92, 231, 0.2);
+        }
+
+        .page-item input[type="checkbox"] {
+            margin-right: 12px;
+            width: 18px;
+            height: 18px;
+        }
+
+        .page-item-label {
+            flex: 1;
+        }
+
+        /* Toast提示 */
+        .toast {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 2000;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .toast.show {
+            opacity: 1;
+        }
+
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .empty-state .icon {
+            font-size: 60px;
+            margin-bottom: 15px;
+        }
+
+        /* 滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #444;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body>
+    <!-- 书架视图 -->
+    <div id="bookshelf">
+        <div class="bookshelf-header">
+            <h1>📚 PDF智能对话助手</h1>
+            <p>上传PDF，与AI对话分析文档内容</p>
+        </div>
+        
+        <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+            <input type="file" id="fileInput" accept=".pdf" onchange="handleFileUpload(event)">
+            <div class="upload-icon">📁</div>
+            <div>点击上传PDF文件</div>
+            <div style="font-size: 12px; color: #888; margin-top: 8px;">支持任意大小PDF，文件不会上传到服务器</div>
+        </div>
+
+        <div class="books-grid" id="booksGrid">
+            <!-- 书籍卡片将动态生成 -->
+        </div>
+    </div>
+
+    <!-- 阅读视图 -->
+    <div id="reader">
+        <div class="reader-header">
+            <button class="back-btn" onclick="showBookshelf()">←</button>
+            <div class="reader-title" id="currentBookTitle">文档名称</div>
+            <button class="settings-btn" onclick="showSettings()">⚙️</button>
+        </div>
+
+        <div class="pdf-container">
+            <div class="page-display">
+                <div class="page-canvas-wrapper">
+                    <canvas id="pdfCanvas"></canvas>
+                </div>
+            </div>
+            
+            <div class="page-nav">
+                <button id="prevBtn" onclick="goToPrevPage()">上一页</button>
+                <div class="page-selector">
+                    <input type="number" id="pageInput" min="1" onchange="goToPage()">
+                    <span>/ <span id="totalPages">1</span></span>
+                </div>
+                <button id="nextBtn" onclick="goToNextPage()">下一页</button>
+            </div>
+        </div>
+
+        <div class="chat-container">
+            <div class="chat-messages" id="chatMessages">
+                <!-- 消息将动态生成 -->
+            </div>
+            <button class="scroll-bottom-btn" id="scrollBottomBtn" onclick="scrollToBottom()">↓</button>
+            
+            <div class="input-area">
+                <div class="input-wrapper">
+                    <input type="text" id="promptInput" placeholder="输入消息... 输入@选择AI模型" oninput="handleInput(event)">
+                    <button class="voice-btn" id="voiceBtn" onclick="toggleVoice()">🎤</button>
+                    <div class="model-selector" id="modelSelector">
+                        <div class="model-option" onclick="selectModel('zhipu', '智谱AI (GLM-4)')">
+                            <div class="model-name">@智谱AI (GLM-4)</div>
+                            <div class="model-desc">通用大模型，适合各类分析任务</div>
+                        </div>
+                        <div class="model-option" onclick="selectModel('deepseek', 'DeepSeek')">
+                            <div class="model-name">@DeepSeek</div>
+                            <div class="model-desc">深度求索，擅长代码和推理</div>
+                        </div>
+                        <div class="model-option" onclick="selectModel('doubao', '豆包')">
+                            <div class="model-name">@豆包</div>
+                            <div class="model-desc">字节跳动，对话流畅自然</div>
+                        </div>
+                        <div class="model-option" onclick="selectModel('qwen', '通义千问')">
+                            <div class="model-name">@通义千问</div>
+                            <div class="model-desc">阿里云，多语言能力强</div>
+                        </div>
+                        <div class="model-option" onclick="selectModel('kimi', 'Kimi')">
+                            <div class="model-name">@Kimi</div>
+                            <div class="model-desc">月之暗面，长文本处理出色</div>
+                        </div>
+                    </div>
+                </div>
+                <button id="sendBtn" onclick="sendMessage()">发送</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 设置弹窗 -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>API密钥设置</h2>
+                <button class="modal-close" onclick="hideSettings()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="api-key-group">
+                    <label>智谱AI API Key</label>
+                    <input type="password" id="zhipuKey" placeholder="请输入智谱AI的API密钥">
+                </div>
+                <div class="api-key-group">
+                    <label>DeepSeek API Key</label>
+                    <input type="password" id="deepseekKey" placeholder="请输入DeepSeek的API密钥">
+                </div>
+                <div class="api-key-group">
+                    <label>豆包 API Key</label>
+                    <input type="password" id="doubaoKey" placeholder="请输入豆包的API密钥">
+                </div>
+                <div class="api-key-group">
+                    <label>通义千问 API Key</label>
+                    <input type="password" id="qwenKey" placeholder="请输入通义千问的API密钥">
+                </div>
+                <div class="api-key-group">
+                    <label>Kimi API Key</label>
+                    <input type="password" id="kimiKey" placeholder="请输入Kimi的API密钥">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button onclick="saveSettings()">保存设置</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // PDF.js 配置
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        // 全局状态
+        let currentBook = null;
+        let pdfDoc = null;
+        let currentPage = 1;
+        let totalPages = 0;
+        let pageTexts = {}; // 存储每页文本
+        let chatHistory = {}; // 存储每本书的聊天历史
+        let selectedModel = null;
+        let isRecording = false;
+        let recognition = null;
+
+        // 模型配置
+        const models = {
+            zhipu: {
+                name: '智谱AI',
+                endpoint: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
+                model: 'glm-4-flash'
+            },
+            deepseek: {
+                name: 'DeepSeek',
+                endpoint: 'https://api.deepseek.com/v1/chat/completions',
+                model: 'deepseek-chat'
+            },
+            doubao: {
+                name: '豆包',
+                endpoint: 'https://ark.cn-beijing.volces.com/api/v3/chat/completions',
+                model: 'doubao-pro-4k'
+            },
+            qwen: {
+                name: '通义千问',
+                endpoint: 'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation',
+                model: 'qwen-turbo'
+            },
+            kimi: {
+                name: 'Kimi',
+                endpoint: 'https://api.moonshot.cn/v1/chat/completions',
+                model: 'moonshot-v1-8k'
+            }
+        };
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            loadBooks();
+            loadApiKeys();
+            initSpeechRecognition();
+            
+            // 监听聊天区域滚动
+            document.getElementById('chatMessages').addEventListener('scroll', handleChatScroll);
+        });
+
+        // 加载书籍列表
+        function loadBooks() {
+            const books = JSON.parse(localStorage.getItem('pdfBooks') || '[]');
+            const grid = document.getElementById('booksGrid');
+            
+            if (books.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state" style="grid-column: 1 / -1;">
+                        <div class="icon">📖</div>
+                        <div>暂无书籍，上传PDF开始阅读</div>
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = books.map((book, index) => `
+                <div class="book-card" onclick="openBook(${index})">
+                    <button class="delete-btn" onclick="deleteBook(event, ${index})">×</button>
+                    <div class="book-icon">📄</div>
+                    <div class="book-title">${book.name}</div>
+                    <div class="book-date">${formatDate(book.date)}</div>
+                </div>
+            `).join('');
+        }
+
+        // 处理文件上传
+        async function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            showToast('正在加载PDF...');
+            
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                
+                // 提取所有页面文本
+                const texts = {};
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+                    texts[i] = textContent.items.map(item => item.str).join(' ');
+                }
+
+                // 保存书籍信息
+                const books = JSON.parse(localStorage.getItem('pdfBooks') || '[]');
+                const bookData = {
+                    id: Date.now(),
+                    name: file.name.replace('.pdf', ''),
+                    data: arrayBufferToBase64(arrayBuffer),
+                    pages: pdf.numPages,
+                    texts: texts,
+                    date: new Date().toISOString()
+                };
+                
+                books.unshift(bookData);
+                localStorage.setItem('pdfBooks', JSON.stringify(books));
+                
+                // 清空input
+                event.target.value = '';
+                
+                showToast('PDF加载成功！');
+                loadBooks();
+                
+                // 直接打开
+                openBook(0);
+            } catch (error) {
+                console.error('Error loading PDF:', error);
+                showToast('PDF加载失败: ' + error.message);
+            }
+        }
+
+        // ArrayBuffer转Base64
+        function arrayBufferToBase64(buffer) {
+            let binary = '';
+            const bytes = new Uint8Array(buffer);
+            for (let i = 0; i < bytes.byteLength; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return btoa(binary);
+        }
+
+        // Base64转ArrayBuffer
+        function base64ToArrayBuffer(base64) {
+            const binary = atob(base64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        // 打开书籍
+        async function openBook(index) {
+            const books = JSON.parse(localStorage.getItem('pdfBooks') || '[]');
+            currentBook = books[index];
+            
+            document.getElementById('currentBookTitle').textContent = currentBook.name;
+            
+            // 加载PDF
+            const arrayBuffer = base64ToArrayBuffer(currentBook.data);
+            pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            totalPages = pdfDoc.numPages;
+            pageTexts = currentBook.texts;
+            
+            document.getElementById('totalPages').textContent = totalPages;
+            
+            // 显示阅读视图
+            document.getElementById('bookshelf').style.display = 'none';
+            document.getElementById('reader').style.display = 'flex';
+            
+            // 渲染第一页
+            await renderPage(1);
+            
+            // 加载聊天历史
+            loadChatHistory();
+        }
+
+        // 渲染页面
+        async function renderPage(pageNum) {
+            currentPage = pageNum;
+            document.getElementById('pageInput').value = pageNum;
+            
+            const page = await pdfDoc.getPage(pageNum);
+            const viewport = page.getViewport({ scale: 1.5 });
+            
+            const canvas = document.getElementById('pdfCanvas');
+            const context = canvas.getContext('2d');
+            
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+            
+            await page.render({
+                canvasContext: context,
+                viewport: viewport
+            }).promise;
+            
+            // 更新导航按钮状态
+            document.getElementById('prevBtn').disabled = pageNum <= 1;
+            document.getElementById('nextBtn').disabled = pageNum >= totalPages;
+        }
+
+        // 页面导航
+        async function goToPrevPage() {
+            if (currentPage > 1) {
+                await renderPage(currentPage - 1);
+            }
+        }
+
+        async function goToNextPage() {
+            if (currentPage < totalPages) {
+                await renderPage(currentPage + 1);
+            }
+        }
+
+        async function goToPage() {
+            const pageNum = parseInt(document.getElementById('pageInput').value);
+            if (pageNum >= 1 && pageNum <= totalPages) {
+                await renderPage(pageNum);
+            } else {
+                document.getElementById('pageInput').value = currentPage;
+            }
+        }
+
+        // 显示书架
+        function showBookshelf() {
+            document.getElementById('reader').style.display = 'none';
+            document.getElementById('bookshelf').style.display = 'flex';
+            currentBook = null;
+            pdfDoc = null;
+        }
+
+        // 删除书籍
+        function deleteBook(event, index) {
+            event.stopPropagation();
+            if (confirm('确定要删除这本书吗？')) {
+                const books = JSON.parse(localStorage.getItem('pdfBooks') || '[]');
+                books.splice(index, 1);
+                localStorage.setItem('pdfBooks', JSON.stringify(books));
+                loadBooks();
+                showToast('书籍已删除');
+            }
+        }
+
+        // 加载聊天历史
+        function loadChatHistory() {
+            const messages = document.getElementById('chatMessages');
+            const history = JSON.parse(localStorage.getItem(`chat_${currentBook.id}`) || '[]');
+            
+            if (history.length === 0) {
+                messages.innerHTML = `
+                    <div class="message assistant">
+                        <div class="message-content">
+                            👋 你好！我是PDF智能助手。你可以向我提问关于当前页面内容的问题。
+                            <br><br>
+                            💡 提示：输入 @ 可以选择不同的AI模型
+                        </div>
+                    </div>
+                `;
+            } else {
+                messages.innerHTML = history.map(msg => `
+                    <div class="message ${msg.role}">
+                        ${msg.model ? `<div class="model-tag">${msg.model}</div>` : ''}
+                        <div class="message-content">${formatMessage(msg.content)}</div>
+                    </div>
+                `).join('');
+            }
+            
+            scrollToBottom();
+        }
+
+        // 格式化消息
+        function formatMessage(content) {
+            return content.replace(/\n/g, '<br>');
+        }
+
+        // 保存聊天历史
+        function saveChatHistory(role, content, model = null) {
+            const history = JSON.parse(localStorage.getItem(`chat_${currentBook.id}`) || '[]');
+            history.push({ role, content, model, timestamp: Date.now() });
+            localStorage.setItem(`chat_${currentBook.id}`, JSON.stringify(history));
+        }
+
+        // 处理输入
+        function handleInput(event) {
+            const value = event.target.value;
+            const selector = document.getElementById('modelSelector');
+            
+            if (value.endsWith('@')) {
+                selector.classList.add('show');
+            } else if (!value.includes('@')) {
+                selector.classList.remove('show');
+            }
+        }
+
+        // 选择模型
+        function selectModel(modelId, modelName) {
+            selectedModel = modelId;
+            const input = document.getElementById('promptInput');
+            const value = input.value;
+            
+            // 替换@为模型名
+            if (value.endsWith('@')) {
+                input.value = value.slice(0, -1) + `@${modelName} `;
+            }
+            
+            document.getElementById('modelSelector').classList.remove('show');
+            input.focus();
+        }
+
+        // 发送消息
+        async function sendMessage() {
+            const input = document.getElementById('promptInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            // 检测模型选择
+            let modelId = 'zhipu'; // 默认
+            let actualMessage = message;
+            
+            const atMatch = message.match(/@([^\s]+)\s*(.*)/);
+            if (atMatch) {
+                const modelName = atMatch[1];
+                for (const [id, config] of Object.entries(models)) {
+                    if (modelName.includes(config.name) || config.name.includes(modelName)) {
+                        modelId = id;
+                        actualMessage = atMatch[2];
+                        break;
+                    }
+                }
+            }
+            
+            // 添加用户消息
+            addMessage('user', actualMessage, models[modelId].name);
+            saveChatHistory('user', actualMessage, models[modelId].name);
+            
+            input.value = '';
+            
+            // 显示加载状态
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'message assistant';
+            loadingDiv.innerHTML = `
+                <div class="model-tag">${models[modelId].name}</div>
+                <div class="message-loading">
+                    <span></span><span></span><span></span>
+                </div>
+            `;
+            document.getElementById('chatMessages').appendChild(loadingDiv);
+            scrollToBottom();
+            
+            try {
+                // 获取当前页面文本
+                const pageContent = pageTexts[currentPage] || '';
+                
+                // 调用API
+                const response = await callModelAPI(modelId, actualMessage, pageContent);
+                
+                // 移除加载状态
+                loadingDiv.remove();
+                
+                // 添加回复
+                addMessage('assistant', response, models[modelId].name);
+                saveChatHistory('assistant', response, models[modelId].name);
+            } catch (error) {
+                loadingDiv.remove();
+                addMessage('assistant', `错误: ${error.message}`, models[modelId].name);
+            }
+        }
+
+        // 添加消息到界面
+        function addMessage(role, content, model = null) {
+            const messages = document.getElementById('chatMessages');
+            const div = document.createElement('div');
+            div.className = `message ${role}`;
+            div.innerHTML = `
+                ${model ? `<div class="model-tag">${model}</div>` : ''}
+                <div class="message-content">${formatMessage(content)}</div>
+            `;
+            messages.appendChild(div);
+            scrollToBottom();
+        }
+
+        // 调用模型API
+        async function callModelAPI(modelId, prompt, pageContent) {
+            const apiKey = localStorage.getItem(`apiKey_${modelId}`);
+            if (!apiKey) {
+                throw new Error(`请先在设置中配置${models[modelId].name}的API密钥`);
+            }
+            
+            const config = models[modelId];
+            const history = JSON.parse(localStorage.getItem(`chat_${currentBook.id}`) || '[]');
+            
+            // 构建消息历史
+            const messages = [
+                {
+                    role: 'system',
+                    content: `你是一个专业的文档分析助手。用户正在阅读一个PDF文档，当前是第${currentPage}页，共${totalPages}页。以下是当前页面的内容：\n\n${pageContent}\n\n请基于这个内容回答用户的问题。如果问题涉及其他页面的内容，请告诉用户可以翻页后再提问。`
+                }
+            ];
+            
+            // 添加最近的对话历史（保留最近5轮）
+            const recentHistory = history.slice(-10);
+            for (const msg of recentHistory) {
+                if (msg.role !== 'system') {
+                    messages.push({
+                        role: msg.role,
+                        content: msg.content
+                    });
+                }
+            }
+            
+            // 添加当前问题
+            messages.push({ role: 'user', content: prompt });
+            
+            // 根据不同模型调用不同API
+            if (modelId === 'qwen') {
+                return await callQwenAPI(apiKey, messages);
+            } else {
+                return await callOpenAICompatibleAPI(config.endpoint, apiKey, config.model, messages);
+            }
+        }
+
+        // 调用OpenAI兼容API
+        async function callOpenAICompatibleAPI(endpoint, apiKey, model, messages) {
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model: model,
+                    messages: messages,
+                    temperature: 0.7,
+                    max_tokens: 2000
+                })
+            });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error?.message || 'API调用失败');
+            }
+            
+            const data = await response.json();
+            return data.choices[0].message.content;
+        }
+
+        // 调用通义千问API
+        async function callQwenAPI(apiKey, messages) {
+            const response = await fetch('https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model: 'qwen-turbo',
+                    input: {
+                        messages: messages
+                    },
+                    parameters: {
+                        temperature: 0.7
+                    }
+                })
+            });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'API调用失败');
+            }
+            
+            const data = await response.json();
+            return data.output.choices[0].message.content;
+        }
+
+        // 显示/隐藏设置
+        function showSettings() {
+            document.getElementById('settingsModal').classList.add('show');
+        }
+
+        function hideSettings() {
+            document.getElementById('settingsModal').classList.remove('show');
+        }
+
+        // 加载API密钥
+        function loadApiKeys() {
+            ['zhipu', 'deepseek', 'doubao', 'qwen', 'kimi'].forEach(id => {
+                const key = localStorage.getItem(`apiKey_${id}`);
+                if (key) {
+                    document.getElementById(`${id}Key`).value = key;
+                }
+            });
+        }
+
+        // 保存设置
+        function saveSettings() {
+            ['zhipu', 'deepseek', 'doubao', 'qwen', 'kimi'].forEach(id => {
+                const key = document.getElementById(`${id}Key`).value.trim();
+                if (key) {
+                    localStorage.setItem(`apiKey_${id}`, key);
+                } else {
+                    localStorage.removeItem(`apiKey_${id}`);
+                }
+            });
+            
+            hideSettings();
+            showToast('设置已保存');
+        }
+
+        // 语音识别
+        function initSpeechRecognition() {
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SpeechRecognition();
+                recognition.continuous = false;
+                recognition.interimResults = true;
+                recognition.lang = 'zh-CN';
+                
+                recognition.onresult = (event) => {
+                    const transcript = event.results[0][0].transcript;
+                    document.getElementById('promptInput').value = transcript;
+                };
+                
+                recognition.onend = () => {
+                    isRecording = false;
+                    document.getElementById('voiceBtn').classList.remove('recording');
+                };
+                
+                recognition.onerror = (event) => {
+                    console.error('Speech recognition error:', event.error);
+                    showToast('语音识别失败');
+                    isRecording = false;
+                    document.getElementById('voiceBtn').classList.remove('recording');
+                };
+            }
+        }
+
+        function toggleVoice() {
+            if (!recognition) {
+                showToast('您的浏览器不支持语音识别');
+                return;
+            }
+            
+            if (isRecording) {
+                recognition.stop();
+                isRecording = false;
+                document.getElementById('voiceBtn').classList.remove('recording');
+            } else {
+                recognition.start();
+                isRecording = true;
+                document.getElementById('voiceBtn').classList.add('recording');
+                showToast('开始语音识别...');
+            }
+        }
+
+        // 滚动到底部
+        function scrollToBottom() {
+            const messages = document.getElementById('chatMessages');
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        // 处理聊天区域滚动
+        function handleChatScroll() {
+            const messages = document.getElementById('chatMessages');
+            const btn = document.getElementById('scrollBottomBtn');
+            
+            const isAtBottom = messages.scrollHeight - messages.scrollTop - messages.clientHeight < 50;
+            
+            if (isAtBottom) {
+                btn.classList.remove('show');
+            } else {
+                btn.classList.add('show');
+            }
+        }
+
+        // Toast提示
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2000);
+        }
+
+        // 格式化日期
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            const month = date.getMonth() + 1;
+            const day = date.getDate();
+            return `${month}月${day}日`;
+        }
+
+        // Enter键发送
+        document.getElementById('promptInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>
