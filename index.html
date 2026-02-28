@@ -3,44 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; worker-src 'self' blob: https://unpkg.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; connect-src 'self' https:; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' blob: data:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; worker-src 'self' blob: https://unpkg.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; connect-src 'self' https: wss:; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline';">
     <title>PDF智能对话助手</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1a1a2e">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <!-- PDF.js 使用多个备用CDN -->
-    <script>
-        // 尝试加载 pdf.js，使用多个备用源
-        (function() {
-            const cdnUrls = [
-                'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js',
-                'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js',
-                'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js'
-            ];
-            let index = 0;
-            
-            function loadPdfJs() {
-                if (index >= cdnUrls.length) {
-                    console.error('所有PDF.js CDN都加载失败');
-                    alert('PDF.js加载失败，请检查网络连接');
-                    return;
-                }
-                const script = document.createElement('script');
-                script.src = cdnUrls[index];
-                script.onload = () => {
-                    console.log('PDF.js加载成功:', cdnUrls[index]);
-                };
-                script.onerror = () => {
-                    index++;
-                    console.warn('CDN加载失败，尝试下一个:', cdnUrls[index-1]);
-                    loadPdfJs();
-                };
-                document.head.appendChild(script);
-            }
-            loadPdfJs();
-        })();
-    </script>
+    <!-- PDF.js - 使用传统script标签加载，兼容PWA -->
+    <script src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js'"></script>
     <style>
         * {
             margin: 0;
