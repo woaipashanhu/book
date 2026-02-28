@@ -24,36 +24,89 @@
             overflow: hidden;
         }
 
-        /* 书架视图 */
-        #bookshelf {
+        /* 主容器 */
+        .app-container {
             height: 100vh;
             display: flex;
             flex-direction: column;
-            padding: 20px;
         }
 
-        .bookshelf-header {
-            text-align: center;
-            padding: 20px 0 30px;
+        /* 页面内容区 */
+        .page-content {
+            flex: 1;
+            overflow-y: auto;
+            padding-bottom: 70px;
         }
 
-        .bookshelf-header h1 {
-            font-size: 24px;
-            color: #fff;
-            margin-bottom: 8px;
+        .page {
+            display: none;
+            height: 100%;
         }
 
-        .bookshelf-header p {
-            font-size: 14px;
+        .page.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 底部导航 */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #1a1a2e;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            border-top: 1px solid #333;
+            z-index: 100;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 8px 20px;
+            cursor: pointer;
             color: #888;
+            transition: color 0.3s;
         }
 
+        .nav-item.active {
+            color: #6c5ce7;
+        }
+
+        .nav-item .icon {
+            font-size: 22px;
+            margin-bottom: 4px;
+        }
+
+        .nav-item .label {
+            font-size: 12px;
+        }
+
+        /* 页面标题 */
+        .page-header {
+            padding: 20px;
+            text-align: center;
+            background: #1a1a2e;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .page-header h1 {
+            font-size: 20px;
+            color: #fff;
+        }
+
+        /* 书籍页面 */
         .upload-area {
+            margin: 20px;
             border: 2px dashed #444;
             border-radius: 16px;
             padding: 30px;
             text-align: center;
-            margin-bottom: 20px;
             cursor: pointer;
             transition: all 0.3s;
         }
@@ -72,52 +125,71 @@
             margin-bottom: 10px;
         }
 
-        .books-grid {
-            flex: 1;
-            overflow-y: auto;
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 15px;
-            padding-bottom: 20px;
+        .upload-text {
+            font-size: 16px;
+            color: #e0e0e0;
         }
 
-        .book-card {
+        .upload-hint {
+            font-size: 12px;
+            color: #888;
+            margin-top: 8px;
+        }
+
+        /* 书籍列表 */
+        .books-list {
+            padding: 0 20px 20px;
+        }
+
+        .books-list-title {
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 15px;
+            padding-left: 5px;
+        }
+
+        .book-item {
             background: #1a1a2e;
             border-radius: 12px;
             padding: 15px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
             cursor: pointer;
             transition: all 0.3s;
             position: relative;
         }
 
-        .book-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        .book-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
         }
 
-        .book-card .book-icon {
-            font-size: 40px;
-            text-align: center;
-            margin-bottom: 10px;
+        .book-item .book-icon {
+            font-size: 32px;
         }
 
-        .book-card .book-title {
-            font-size: 14px;
+        .book-item .book-info {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .book-item .book-name {
+            font-size: 16px;
             font-weight: 500;
-            text-align: center;
+            margin-bottom: 4px;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
         }
 
-        .book-card .book-date {
+        .book-item .book-meta {
             font-size: 12px;
-            color: #666;
-            text-align: center;
-            margin-top: 5px;
+            color: #888;
         }
 
-        .book-card .delete-btn {
+        .book-item .delete-btn {
             position: absolute;
             top: 8px;
             right: 8px;
@@ -125,26 +197,96 @@
             color: white;
             border: none;
             border-radius: 50%;
-            width: 24px;
-            height: 24px;
+            width: 22px;
+            height: 22px;
             font-size: 12px;
             cursor: pointer;
             opacity: 0;
             transition: opacity 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        .book-card:hover .delete-btn {
+        .book-item:hover .delete-btn {
             opacity: 1;
         }
 
-        /* 阅读视图 */
-        #reader {
+        /* 对话页面 */
+        .chat-list {
+            padding: 20px;
+        }
+
+        .chat-item {
+            background: #1a1a2e;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .chat-item:hover {
+            transform: translateX(5px);
+        }
+
+        .chat-item .chat-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .chat-item .book-icon-small {
+            font-size: 20px;
+        }
+
+        .chat-item .chat-book-name {
+            font-size: 15px;
+            font-weight: 500;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .chat-item .chat-preview {
+            font-size: 13px;
+            color: #888;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .chat-item .chat-time {
+            font-size: 11px;
+            color: #666;
+            margin-top: 6px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 40px;
+            color: #666;
+        }
+
+        .empty-state .icon {
+            font-size: 60px;
+            margin-bottom: 15px;
+        }
+
+        /* 聊天视图 */
+        .chat-view {
             display: none;
             height: 100vh;
             flex-direction: column;
         }
 
-        .reader-header {
+        .chat-view.active {
+            display: flex;
+        }
+
+        .chat-header {
             display: flex;
             align-items: center;
             padding: 15px;
@@ -161,7 +303,7 @@
             padding: 5px;
         }
 
-        .reader-title {
+        .chat-title {
             flex: 1;
             font-size: 16px;
             font-weight: 500;
@@ -170,106 +312,80 @@
             white-space: nowrap;
         }
 
-        .settings-btn {
-            background: none;
-            border: none;
-            color: #e0e0e0;
-            font-size: 20px;
-            cursor: pointer;
-            padding: 5px;
+        .page-indicator {
+            font-size: 12px;
+            color: #6c5ce7;
+            background: rgba(108, 92, 231, 0.2);
+            padding: 4px 10px;
+            border-radius: 12px;
         }
 
-        /* PDF显示区域 */
-        .pdf-container {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        .page-display {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px;
-            overflow-y: auto;
+        /* PDF预览区 */
+        .pdf-preview {
             background: #16213e;
+            padding: 10px;
+            display: none;
         }
 
-        .page-canvas-wrapper {
-            max-width: 100%;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-            overflow: hidden;
-        }
-
-        #pdfCanvas {
+        .pdf-preview.show {
             display: block;
-            max-width: 100%;
-            height: auto;
         }
 
-        .page-nav {
+        .pdf-preview-header {
             display: flex;
-            justify-content: center;
+            justify-content: space-between;
             align-items: center;
-            gap: 15px;
-            padding: 15px;
-            background: #1a1a2e;
+            margin-bottom: 10px;
         }
 
-        .page-nav button {
-            background: #6c5ce7;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-size: 14px;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-
-        .page-nav button:disabled {
-            background: #444;
-            cursor: not-allowed;
-        }
-
-        .page-nav span {
-            font-size: 14px;
+        .pdf-preview-title {
+            font-size: 13px;
             color: #888;
         }
 
-        .page-selector {
-            display: flex;
-            align-items: center;
-            gap: 8px;
+        .pdf-preview-close {
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 18px;
+            cursor: pointer;
         }
 
-        .page-selector input {
-            width: 50px;
-            padding: 8px;
-            border: 1px solid #444;
-            border-radius: 6px;
-            background: #0f0f1a;
-            color: #e0e0e0;
+        .pdf-pages-scroll {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding-bottom: 10px;
+        }
+
+        .pdf-page-thumb {
+            flex-shrink: 0;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        .pdf-page-thumb canvas {
+            display: block;
+            width: 120px;
+            height: auto;
+        }
+
+        .pdf-page-thumb .page-num {
             text-align: center;
-            font-size: 14px;
-        }
-
-        /* 聊天区域 */
-        .chat-container {
-            height: 40vh;
-            display: flex;
-            flex-direction: column;
+            font-size: 11px;
+            color: #888;
+            padding: 4px;
             background: #1a1a2e;
         }
 
+        /* 聊天消息区 */
         .chat-messages {
             flex: 1;
             overflow-y: auto;
             padding: 15px;
+            background: #0f0f1a;
         }
 
         .message {
@@ -279,6 +395,10 @@
 
         .message.user {
             margin-left: auto;
+        }
+
+        .message.assistant {
+            margin-right: auto;
         }
 
         .message-content {
@@ -300,13 +420,15 @@
             border-bottom-left-radius: 4px;
         }
 
-        .message.assistant {
-            margin-right: auto;
-        }
-
         .model-tag {
             font-size: 11px;
             color: #6c5ce7;
+            margin-bottom: 4px;
+        }
+
+        .pages-tag {
+            font-size: 11px;
+            color: #888;
             margin-bottom: 4px;
         }
 
@@ -332,14 +454,126 @@
             40% { transform: scale(1); }
         }
 
+        /* 页面截图显示 */
+        .message-pages {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .message-page-img {
+            width: 80px;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
         /* 输入区域 */
+        /* 模型快捷图标栏 */
+        .model-icons-bar {
+            display: flex;
+            gap: 8px;
+            padding: 8px 15px;
+            background: #1a1a2e;
+            border-top: 1px solid #333;
+        }
+
+        .model-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid #444;
+            background: #0f0f1a;
+        }
+
+        .model-icon:hover {
+            transform: scale(1.1);
+            border-color: #6c5ce7;
+        }
+
+        .model-icon.active {
+            border-color: #6c5ce7;
+            background: #6c5ce7;
+            color: white;
+        }
+
+        .model-icon.zhipu { color: #4CAF50; }
+        .model-icon.deepseek { color: #2196F3; }
+        .model-icon.doubao { color: #FF9800; }
+        .model-icon.qwen { color: #9C27B0; }
+        .model-icon.kimi { color: #00BCD4; }
+        .model-icon.longcat { color: #E91E63; }
+
+        .model-icon.no-key {
+            opacity: 0.4;
+        }
+
+        .model-icon.no-key:hover {
+            opacity: 0.6;
+        }
+
         .input-area {
             display: flex;
             align-items: center;
             gap: 10px;
-            padding: 15px;
-            background: #0f0f1a;
+            padding: 12px 15px;
+            background: #1a1a2e;
             border-top: 1px solid #333;
+            position: relative;
+        }
+
+        /* 语音输入模式 */
+        .voice-input-mode {
+            flex: 1;
+        }
+
+        .voice-input-btn {
+            width: 100%;
+            height: 46px;
+            background: #2d2d44;
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        .voice-input-btn:active, .voice-input-btn.recording {
+            background: #6c5ce7;
+            transform: scale(0.98);
+        }
+
+        .voice-input-btn.recording {
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(108, 92, 231, 0.4); }
+            50% { box-shadow: 0 0 0 10px rgba(108, 92, 231, 0); }
+        }
+
+        .voice-btn-text {
+            font-size: 15px;
+            color: #e0e0e0;
+        }
+
+        /* 打字输入模式 */
+        .text-input-mode {
+            flex: 1;
+            display: flex;
+            align-items: flex-end;
+            gap: 10px;
         }
 
         .input-wrapper {
@@ -349,14 +583,17 @@
 
         #promptInput {
             width: 100%;
-            padding: 12px 50px 12px 16px;
+            padding: 12px 16px;
             border: 1px solid #444;
             border-radius: 24px;
-            background: #1a1a2e;
+            background: #0f0f1a;
             color: #e0e0e0;
             font-size: 15px;
             outline: none;
             transition: border-color 0.3s;
+            resize: none;
+            min-height: 46px;
+            max-height: 120px;
         }
 
         #promptInput:focus {
@@ -366,8 +603,7 @@
         .voice-btn {
             position: absolute;
             right: 12px;
-            top: 50%;
-            transform: translateY(-50%);
+            bottom: 10px;
             background: none;
             border: none;
             color: #888;
@@ -384,7 +620,7 @@
             background: #6c5ce7;
             color: white;
             border: none;
-            padding: 12px 24px;
+            padding: 12px 20px;
             border-radius: 24px;
             font-size: 15px;
             cursor: pointer;
@@ -400,6 +636,86 @@
             cursor: not-allowed;
         }
 
+        /* 模式切换按钮 */
+        .mode-switch-btn {
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            background: #2d2d44;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+            flex-shrink: 0;
+        }
+
+        .mode-switch-btn:hover {
+            background: #3d3d54;
+        }
+
+        /* 语音提示浮层 */
+        .voice-toast {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+        }
+
+        .voice-toast.show {
+            display: block;
+        }
+
+        .voice-toast-content {
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 16px;
+            padding: 20px 30px;
+            text-align: center;
+        }
+
+        .voice-wave {
+            display: flex;
+            justify-content: center;
+            gap: 4px;
+            margin-bottom: 15px;
+        }
+
+        .voice-wave span {
+            width: 4px;
+            height: 20px;
+            background: #6c5ce7;
+            border-radius: 2px;
+            animation: wave 0.5s infinite ease-in-out;
+        }
+
+        .voice-wave span:nth-child(1) { animation-delay: 0s; }
+        .voice-wave span:nth-child(2) { animation-delay: 0.1s; }
+        .voice-wave span:nth-child(3) { animation-delay: 0.2s; }
+        .voice-wave span:nth-child(4) { animation-delay: 0.3s; }
+        .voice-wave span:nth-child(5) { animation-delay: 0.4s; }
+
+        @keyframes wave {
+            0%, 100% { height: 10px; }
+            50% { height: 30px; }
+        }
+
+        .voice-toast-text {
+            color: #e0e0e0;
+            font-size: 14px;
+        }
+
+        .voice-toast.cancel {
+            opacity: 0.6;
+        }
+
+        .voice-toast.cancel .voice-toast-text {
+            color: #ff4757;
+        }
+
         /* 模型选择器 */
         .model-selector {
             display: none;
@@ -411,7 +727,7 @@
             border: 1px solid #444;
             border-radius: 12px;
             margin-bottom: 10px;
-            max-height: 200px;
+            max-height: 250px;
             overflow-y: auto;
             z-index: 100;
         }
@@ -424,6 +740,11 @@
             padding: 12px 16px;
             cursor: pointer;
             transition: background 0.2s;
+            border-bottom: 1px solid #333;
+        }
+
+        .model-option:last-child {
+            border-bottom: none;
         }
 
         .model-option:hover {
@@ -440,63 +761,65 @@
             color: #888;
         }
 
-        /* 设置弹窗 */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.7);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
+        /* 我的页面 */
+        .settings-section {
             padding: 20px;
         }
 
-        .modal-overlay.show {
-            display: flex;
+        .settings-group {
+            margin-bottom: 25px;
         }
 
-        .modal {
+        .settings-group-title {
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 12px;
+            padding-left: 5px;
+        }
+
+        .api-key-item {
             background: #1a1a2e;
-            border-radius: 16px;
-            width: 100%;
-            max-width: 400px;
-            max-height: 80vh;
-            overflow-y: auto;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 12px;
         }
 
-        .modal-header {
+        .api-key-item.is-default {
+            border: 2px solid #6c5ce7;
+        }
+
+        .api-key-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 20px;
-            border-bottom: 1px solid #333;
+            margin-bottom: 8px;
         }
 
-        .modal-header h2 {
-            font-size: 18px;
+        .api-key-header label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #e0e0e0;
         }
 
-        .modal-close {
-            background: none;
+        .default-btn {
+            background: #333;
             border: none;
-            color: #888;
-            font-size: 24px;
+            font-size: 18px;
             cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.2s;
         }
 
-        .modal-body {
-            padding: 20px;
+        .default-btn:hover {
+            background: #444;
         }
 
-        .api-key-group {
-            margin-bottom: 20px;
+        .is-default .default-btn {
+            background: #6c5ce7;
         }
 
-        .api-key-group label {
+        .api-key-item label {
             display: block;
             font-size: 14px;
             font-weight: 500;
@@ -504,7 +827,7 @@
             color: #e0e0e0;
         }
 
-        .api-key-group input {
+        .api-key-item input {
             width: 100%;
             padding: 12px;
             border: 1px solid #444;
@@ -514,89 +837,88 @@
             font-size: 14px;
         }
 
-        .modal-footer {
-            padding: 20px;
-            border-top: 1px solid #333;
+        .api-key-item input:focus {
+            outline: none;
+            border-color: #6c5ce7;
         }
 
-        .modal-footer button {
+        .save-btn {
             width: 100%;
             padding: 14px;
             background: #6c5ce7;
             color: white;
             border: none;
-            border-radius: 8px;
+            border-radius: 12px;
             font-size: 16px;
             cursor: pointer;
             transition: background 0.3s;
         }
 
-        .modal-footer button:hover {
+        .save-btn:hover {
             background: #5b4cdb;
         }
 
-        /* 滚动到底部按钮 */
-        .scroll-bottom-btn {
+        /* Toast提示 */
+        /* 图片放大查看器 */
+        .lightbox {
             display: none;
-            position: absolute;
-            bottom: 70px;
-            right: 20px;
-            background: #6c5ce7;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 44px;
-            height: 44px;
-            font-size: 18px;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(108, 92, 231, 0.4);
-            z-index: 50;
-        }
-
-        .scroll-bottom-btn.show {
-            display: flex;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 2000;
             justify-content: center;
             align-items: center;
         }
 
-        /* 页面选择弹窗 */
-        .page-select-modal {
-            max-width: 350px;
-        }
-
-        .page-list {
-            max-height: 300px;
-            overflow-y: auto;
-        }
-
-        .page-item {
+        .lightbox.show {
             display: flex;
-            align-items: center;
-            padding: 12px;
-            border-bottom: 1px solid #333;
+        }
+
+        .lightbox-content {
+            position: relative;
+            max-width: 95vw;
+            max-height: 95vh;
+        }
+
+        .lightbox-content img {
+            max-width: 95vw;
+            max-height: 90vh;
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .lightbox-close {
+            position: absolute;
+            top: -40px;
+            right: 0;
+            font-size: 32px;
+            color: white;
             cursor: pointer;
-            transition: background 0.2s;
+            background: none;
+            border: none;
         }
 
-        .page-item:hover {
-            background: #2d2d44;
+        .lightbox-page {
+            text-align: center;
+            color: #888;
+            font-size: 14px;
+            margin-top: 10px;
         }
 
-        .page-item.selected {
-            background: rgba(108, 92, 231, 0.2);
+        /* 让缩略图可点击 */
+        .pdf-page-thumb {
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
         }
 
-        .page-item input[type="checkbox"] {
-            margin-right: 12px;
-            width: 18px;
-            height: 18px;
+        .pdf-page-thumb:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 20px rgba(108, 92, 231, 0.4);
         }
 
-        .page-item-label {
-            flex: 1;
-        }
-
-        /* Toast提示 */
         .toast {
             position: fixed;
             bottom: 100px;
@@ -610,27 +932,17 @@
             z-index: 2000;
             opacity: 0;
             transition: opacity 0.3s;
+            pointer-events: none;
         }
 
         .toast.show {
             opacity: 1;
         }
 
-        /* 空状态 */
-        .empty-state {
-            text-align: center;
-            padding: 40px;
-            color: #666;
-        }
-
-        .empty-state .icon {
-            font-size: 60px;
-            margin-bottom: 15px;
-        }
-
         /* 滚动条样式 */
         ::-webkit-scrollbar {
             width: 6px;
+            height: 6px;
         }
 
         ::-webkit-scrollbar-track {
@@ -648,120 +960,203 @@
     </style>
 </head>
 <body>
-    <!-- 书架视图 -->
-    <div id="bookshelf">
-        <div class="bookshelf-header">
-            <h1>📚 PDF智能对话助手</h1>
-            <p>上传PDF，与AI对话分析文档内容</p>
-        </div>
-        
-        <div class="upload-area" onclick="document.getElementById('fileInput').click()">
-            <input type="file" id="fileInput" accept=".pdf" onchange="handleFileUpload(event)">
-            <div class="upload-icon">📁</div>
-            <div>点击上传PDF文件</div>
-            <div style="font-size: 12px; color: #888; margin-top: 8px;">支持任意大小PDF，文件不会上传到服务器</div>
-        </div>
-
-        <div class="books-grid" id="booksGrid">
-            <!-- 书籍卡片将动态生成 -->
-        </div>
-    </div>
-
-    <!-- 阅读视图 -->
-    <div id="reader">
-        <div class="reader-header">
-            <button class="back-btn" onclick="showBookshelf()">←</button>
-            <div class="reader-title" id="currentBookTitle">文档名称</div>
-            <button class="settings-btn" onclick="showSettings()">⚙️</button>
-        </div>
-
-        <div class="pdf-container">
-            <div class="page-display">
-                <div class="page-canvas-wrapper">
-                    <canvas id="pdfCanvas"></canvas>
+    <div class="app-container">
+        <!-- 书籍页面 -->
+        <div class="page active" id="booksPage">
+            <div class="page-header">
+                <h1>📚 书籍</h1>
+            </div>
+            <div class="page-content">
+                <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                    <input type="file" id="fileInput" accept=".pdf" onchange="handleFileUpload(event)">
+                    <div class="upload-icon">📁</div>
+                    <div class="upload-text">点击上传PDF文件</div>
+                    <div class="upload-hint">文件保存在本地，不会上传到服务器</div>
                 </div>
-            </div>
-            
-            <div class="page-nav">
-                <button id="prevBtn" onclick="goToPrevPage()">上一页</button>
-                <div class="page-selector">
-                    <input type="number" id="pageInput" min="1" onchange="goToPage()">
-                    <span>/ <span id="totalPages">1</span></span>
-                </div>
-                <button id="nextBtn" onclick="goToNextPage()">下一页</button>
-            </div>
-        </div>
-
-        <div class="chat-container">
-            <div class="chat-messages" id="chatMessages">
-                <!-- 消息将动态生成 -->
-            </div>
-            <button class="scroll-bottom-btn" id="scrollBottomBtn" onclick="scrollToBottom()">↓</button>
-            
-            <div class="input-area">
-                <div class="input-wrapper">
-                    <input type="text" id="promptInput" placeholder="输入消息... 输入@选择AI模型" oninput="handleInput(event)">
-                    <button class="voice-btn" id="voiceBtn" onclick="toggleVoice()">🎤</button>
-                    <div class="model-selector" id="modelSelector">
-                        <div class="model-option" onclick="selectModel('zhipu', '智谱AI (GLM-4)')">
-                            <div class="model-name">@智谱AI (GLM-4)</div>
-                            <div class="model-desc">通用大模型，适合各类分析任务</div>
-                        </div>
-                        <div class="model-option" onclick="selectModel('deepseek', 'DeepSeek')">
-                            <div class="model-name">@DeepSeek</div>
-                            <div class="model-desc">深度求索，擅长代码和推理</div>
-                        </div>
-                        <div class="model-option" onclick="selectModel('doubao', '豆包')">
-                            <div class="model-name">@豆包</div>
-                            <div class="model-desc">字节跳动，对话流畅自然</div>
-                        </div>
-                        <div class="model-option" onclick="selectModel('qwen', '通义千问')">
-                            <div class="model-name">@通义千问</div>
-                            <div class="model-desc">阿里云，多语言能力强</div>
-                        </div>
-                        <div class="model-option" onclick="selectModel('kimi', 'Kimi')">
-                            <div class="model-name">@Kimi</div>
-                            <div class="model-desc">月之暗面，长文本处理出色</div>
-                        </div>
+                <div class="books-list">
+                    <div class="books-list-title">我的书籍</div>
+                    <div id="booksList">
+                        <!-- 书籍列表 -->
                     </div>
                 </div>
-                <button id="sendBtn" onclick="sendMessage()">发送</button>
+            </div>
+        </div>
+
+        <!-- 对话页面 -->
+        <div class="page" id="chatsPage">
+            <div class="page-header">
+                <h1>💬 对话</h1>
+            </div>
+            <div class="page-content">
+                <div class="chat-list" id="chatList">
+                    <!-- 对话列表 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 我的页面 -->
+        <div class="page" id="minePage">
+            <div class="page-header">
+                <h1>👤 我的</h1>
+            </div>
+            <div class="page-content">
+                <div class="settings-section">
+                    <div class="settings-group">
+                        <div class="settings-group-title">API密钥设置 <span style="color:#6c5ce7;font-size:12px;">（点击⭐设为默认模型）</span></div>
+                        <div class="api-key-item" id="zhipuKeyItem">
+                            <div class="api-key-header">
+                                <label>智谱AI (GLM-4)</label>
+                                <button class="default-btn" onclick="setDefaultModel('zhipu')">⭐</button>
+                            </div>
+                            <input type="password" id="zhipuKey" placeholder="请输入API密钥">
+                        </div>
+                        <div class="api-key-item" id="deepseekKeyItem">
+                            <div class="api-key-header">
+                                <label>DeepSeek</label>
+                                <button class="default-btn" onclick="setDefaultModel('deepseek')">⭐</button>
+                            </div>
+                            <input type="password" id="deepseekKey" placeholder="请输入API密钥">
+                        </div>
+                        <div class="api-key-item" id="doubaoKeyItem">
+                            <div class="api-key-header">
+                                <label>豆包</label>
+                                <button class="default-btn" onclick="setDefaultModel('doubao')">⭐</button>
+                            </div>
+                            <input type="password" id="doubaoKey" placeholder="请输入API密钥">
+                        </div>
+                        <div class="api-key-item" id="qwenKeyItem">
+                            <div class="api-key-header">
+                                <label>通义千问</label>
+                                <button class="default-btn" onclick="setDefaultModel('qwen')">⭐</button>
+                            </div>
+                            <input type="password" id="qwenKey" placeholder="请输入API密钥">
+                        </div>
+                        <div class="api-key-item" id="kimiKeyItem">
+                            <div class="api-key-header">
+                                <label>Kimi</label>
+                                <button class="default-btn" onclick="setDefaultModel('kimi')">⭐</button>
+                            </div>
+                            <input type="password" id="kimiKey" placeholder="请输入API密钥">
+                        </div>
+                        <div class="api-key-item" id="longcatKeyItem">
+                            <div class="api-key-header">
+                                <label>美团LongCat</label>
+                                <button class="default-btn" onclick="setDefaultModel('longcat')">⭐</button>
+                            </div>
+                            <input type="password" id="longcatKey" placeholder="请输入API密钥">
+                        </div>
+                    </div>
+
+                    <!-- 语音识别API设置 -->
+                    <div class="settings-group">
+                        <div class="settings-group-title">语音识别API <span style="color:#888;font-size:11px;">（二选一即可）</span></div>
+                        <div class="api-key-item">
+                            <div class="api-key-header">
+                                <label>百度语音</label>
+                            </div>
+                            <input type="text" id="baiduAppId" placeholder="App ID" style="margin-bottom:8px;">
+                            <input type="text" id="baiduApiKey" placeholder="API Key">
+                            <input type="password" id="baiduSecretKey" placeholder="Secret Key" style="margin-top:8px;">
+                            <div style="font-size:11px;color:#888;margin-top:8px;">免费额度：每日50000次</div>
+                        </div>
+                        <div class="api-key-item">
+                            <div class="api-key-header">
+                                <label>讯飞语音</label>
+                            </div>
+                            <input type="text" id="xunfeiAppId" placeholder="App ID">
+                            <input type="password" id="xunfeiApiKey" placeholder="API Key" style="margin-top:8px;">
+                            <div style="font-size:11px;color:#888;margin-top:8px;">免费额度：每日50000次</div>
+                        </div>
+                    </div>
+
+                    <button class="save-btn" onclick="saveSettings()">保存设置</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 底部导航 -->
+        <div class="bottom-nav">
+            <div class="nav-item active" onclick="switchPage('books')">
+                <span class="icon">📚</span>
+                <span class="label">书籍</span>
+            </div>
+            <div class="nav-item" onclick="switchPage('chats')">
+                <span class="icon">💬</span>
+                <span class="label">对话</span>
+            </div>
+            <div class="nav-item" onclick="switchPage('mine')">
+                <span class="icon">👤</span>
+                <span class="label">我的</span>
+            </div>
+        </div>
+
+        <!-- 聊天视图 -->
+        <div class="chat-view" id="chatView">
+            <div class="chat-header">
+                <button class="back-btn" onclick="closeChatView()">←</button>
+                <div class="chat-title" id="chatBookTitle">书名</div>
+                <div class="page-indicator" id="pageIndicator">第1页 / 共10页</div>
+            </div>
+
+            <!-- PDF预览区 -->
+            <div class="pdf-preview" id="pdfPreview">
+                <div class="pdf-preview-header">
+                    <span class="pdf-preview-title">📖 正在分析的页面</span>
+                    <button class="pdf-preview-close" onclick="hidePdfPreview()">×</button>
+                </div>
+                <div class="pdf-pages-scroll" id="pdfPagesScroll">
+                    <!-- 页面缩略图 -->
+                </div>
+            </div>
+
+            <!-- 聊天消息 -->
+            <div class="chat-messages" id="chatMessages">
+                <!-- 消息内容 -->
+            </div>
+
+            <!-- 模型快捷图标栏 -->
+            <div class="model-icons-bar" id="modelIconsBar">
+                <!-- 动态生成 -->
+            </div>
+
+            <!-- 输入区 -->
+            <div class="input-area">
+                <!-- 语音模式 -->
+                <div class="voice-input-mode" id="voiceMode">
+                    <div class="voice-input-btn" id="voiceInputBtn">
+                        <span class="voice-btn-text">按住 说话</span>
+                    </div>
+                </div>
+                <!-- 打字模式 -->
+                <div class="text-input-mode" id="textMode" style="display: none;">
+                    <div class="input-wrapper">
+                        <textarea id="promptInput" placeholder="输入消息..." rows="1" oninput="handleInput(event)"></textarea>
+                    </div>
+                    <button id="sendBtn" onclick="sendMessage()">发送</button>
+                </div>
+                <!-- 模式切换按钮 -->
+                <button class="mode-switch-btn" id="modeSwitchBtn" onclick="toggleInputMode()">
+                    <span id="modeSwitchIcon">⌨️</span>
+                </button>
+            </div>
+            <!-- 语音提示浮层 -->
+            <div class="voice-toast" id="voiceToast">
+                <div class="voice-toast-content">
+                    <div class="voice-wave">
+                        <span></span><span></span><span></span><span></span><span></span>
+                    </div>
+                    <div class="voice-toast-text" id="voiceToastText">松开发送，上滑取消</div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- 设置弹窗 -->
-    <div class="modal-overlay" id="settingsModal">
-        <div class="modal">
-            <div class="modal-header">
-                <h2>API密钥设置</h2>
-                <button class="modal-close" onclick="hideSettings()">×</button>
-            </div>
-            <div class="modal-body">
-                <div class="api-key-group">
-                    <label>智谱AI API Key</label>
-                    <input type="password" id="zhipuKey" placeholder="请输入智谱AI的API密钥">
-                </div>
-                <div class="api-key-group">
-                    <label>DeepSeek API Key</label>
-                    <input type="password" id="deepseekKey" placeholder="请输入DeepSeek的API密钥">
-                </div>
-                <div class="api-key-group">
-                    <label>豆包 API Key</label>
-                    <input type="password" id="doubaoKey" placeholder="请输入豆包的API密钥">
-                </div>
-                <div class="api-key-group">
-                    <label>通义千问 API Key</label>
-                    <input type="password" id="qwenKey" placeholder="请输入通义千问的API密钥">
-                </div>
-                <div class="api-key-group">
-                    <label>Kimi API Key</label>
-                    <input type="password" id="kimiKey" placeholder="请输入Kimi的API密钥">
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button onclick="saveSettings()">保存设置</button>
-            </div>
+    <!-- 图片放大查看器 -->
+    <div class="lightbox" id="lightbox" onclick="closeLightbox()">
+        <div class="lightbox-content">
+            <img id="lightboxImg" src="">
+            <div class="lightbox-close">×</div>
+            <div class="lightbox-page" id="lightboxPage"></div>
         </div>
     </div>
 
@@ -777,59 +1172,189 @@
         let pdfDoc = null;
         let currentPage = 1;
         let totalPages = 0;
-        let pageTexts = {}; // 存储每页文本
-        let chatHistory = {}; // 存储每本书的聊天历史
+        let pageTexts = {};
+        let pageCanvases = {}; // 缓存页面canvas
         let selectedModel = null;
+        let defaultModel = 'zhipu'; // 默认模型
+        let oneTimeModel = null; // 一次性使用的模型（用完自动切回默认）
         let isRecording = false;
         let recognition = null;
+        let inputMode = 'voice'; // 'voice' 或 'text'
+        let voiceStartY = 0; // 触摸开始的Y坐标
+        let isVoiceCancel = false; // 是否取消语音
+
+        // IndexedDB
+        const DB_NAME = 'PDFChatDB';
+        const DB_VERSION = 1;
+        let db = null;
 
         // 模型配置
         const models = {
             zhipu: {
                 name: '智谱AI',
+                icon: 'Z',
                 endpoint: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
                 model: 'glm-4-flash'
             },
             deepseek: {
                 name: 'DeepSeek',
+                icon: 'D',
                 endpoint: 'https://api.deepseek.com/v1/chat/completions',
                 model: 'deepseek-chat'
             },
             doubao: {
                 name: '豆包',
+                icon: '豆',
                 endpoint: 'https://ark.cn-beijing.volces.com/api/v3/chat/completions',
                 model: 'doubao-pro-4k'
             },
             qwen: {
                 name: '通义千问',
+                icon: '通',
                 endpoint: 'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation',
                 model: 'qwen-turbo'
             },
             kimi: {
                 name: 'Kimi',
+                icon: 'K',
                 endpoint: 'https://api.moonshot.cn/v1/chat/completions',
                 model: 'moonshot-v1-8k'
+            },
+            longcat: {
+                name: '美团LongCat',
+                icon: '美',
+                endpoint: 'https://api.longcat.chat/openai/v1/chat/completions',
+                model: 'LongCat-Flash-Chat'
             }
         };
 
+        // 初始化IndexedDB
+        async function initDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => {
+                    db = request.result;
+                    resolve(db);
+                };
+                
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains('books')) {
+                        db.createObjectStore('books', { keyPath: 'id' });
+                    }
+                    if (!db.objectStoreNames.contains('chats')) {
+                        const chatStore = db.createObjectStore('chats', { keyPath: 'id' });
+                        chatStore.createIndex('bookId', 'bookId', { unique: false });
+                    }
+                };
+            });
+        }
+
+        // 保存书籍到IndexedDB
+        async function saveBookToDB(book) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(['books'], 'readwrite');
+                const store = transaction.objectStore('books');
+                const request = store.put(book);
+                request.onsuccess = () => resolve();
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        // 获取所有书籍
+        async function getAllBooks() {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(['books'], 'readonly');
+                const store = transaction.objectStore('books');
+                const request = store.getAll();
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        // 删除书籍
+        async function deleteBookFromDB(id) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(['books'], 'readwrite');
+                const store = transaction.objectStore('books');
+                const request = store.delete(id);
+                request.onsuccess = () => resolve();
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        // 保存聊天记录
+        async function saveChatToDB(chat) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(['chats'], 'readwrite');
+                const store = transaction.objectStore('chats');
+                const request = store.put(chat);
+                request.onsuccess = () => resolve();
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        // 获取书籍的聊天记录
+        async function getChatByBookId(bookId) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(['chats'], 'readonly');
+                const store = transaction.objectStore('chats');
+                const request = store.get(bookId);
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        // 获取所有聊天记录
+        async function getAllChats() {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(['chats'], 'readonly');
+                const store = transaction.objectStore('chats');
+                const request = store.getAll();
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
         // 初始化
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
+            await initDB();
             loadBooks();
+            loadChats();
             loadApiKeys();
             initSpeechRecognition();
-            
-            // 监听聊天区域滚动
-            document.getElementById('chatMessages').addEventListener('scroll', handleChatScroll);
+            loadInputMode();
         });
 
+        // 页面切换
+        function switchPage(page) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            
+            if (page === 'books') {
+                document.getElementById('booksPage').classList.add('active');
+                document.querySelectorAll('.nav-item')[0].classList.add('active');
+                loadBooks();
+            } else if (page === 'chats') {
+                document.getElementById('chatsPage').classList.add('active');
+                document.querySelectorAll('.nav-item')[1].classList.add('active');
+                loadChats();
+            } else if (page === 'mine') {
+                document.getElementById('minePage').classList.add('active');
+                document.querySelectorAll('.nav-item')[2].classList.add('active');
+            }
+        }
+
         // 加载书籍列表
-        function loadBooks() {
-            const books = JSON.parse(localStorage.getItem('pdfBooks') || '[]');
-            const grid = document.getElementById('booksGrid');
+        async function loadBooks() {
+            const books = await getAllBooks();
+            const list = document.getElementById('booksList');
             
             if (books.length === 0) {
-                grid.innerHTML = `
-                    <div class="empty-state" style="grid-column: 1 / -1;">
+                list.innerHTML = `
+                    <div class="empty-state">
                         <div class="icon">📖</div>
                         <div>暂无书籍，上传PDF开始阅读</div>
                     </div>
@@ -837,14 +1362,50 @@
                 return;
             }
 
-            grid.innerHTML = books.map((book, index) => `
-                <div class="book-card" onclick="openBook(${index})">
-                    <button class="delete-btn" onclick="deleteBook(event, ${index})">×</button>
+            list.innerHTML = books.map(book => `
+                <div class="book-item" onclick="openBook('${book.id}')">
+                    <button class="delete-btn" onclick="deleteBook(event, '${book.id}')">×</button>
                     <div class="book-icon">📄</div>
-                    <div class="book-title">${book.name}</div>
-                    <div class="book-date">${formatDate(book.date)}</div>
+                    <div class="book-info">
+                        <div class="book-name">${book.name}</div>
+                        <div class="book-meta">${book.pages}页 · ${formatDate(book.date)}</div>
+                    </div>
                 </div>
             `).join('');
+        }
+
+        // 加载对话列表
+        async function loadChats() {
+            const chats = await getAllChats();
+            const books = await getAllBooks();
+            const list = document.getElementById('chatList');
+            
+            if (chats.length === 0) {
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">💬</div>
+                        <div>暂无对话记录</div>
+                        <div style="font-size: 13px; margin-top: 8px; color: #555;">从书籍列表选择一本书开始对话</div>
+                    </div>
+                `;
+                return;
+            }
+
+            list.innerHTML = chats.map(chat => {
+                const book = books.find(b => b.id === chat.bookId);
+                if (!book) return '';
+                const lastMsg = chat.messages[chat.messages.length - 1];
+                return `
+                    <div class="chat-item" onclick="openBook('${book.id}')">
+                        <div class="chat-header">
+                            <span class="book-icon-small">📄</span>
+                            <span class="chat-book-name">${book.name}</span>
+                        </div>
+                        <div class="chat-preview">${lastMsg ? lastMsg.content.substring(0, 50) + '...' : '暂无消息'}</div>
+                        <div class="chat-time">${formatDate(chat.lastUpdate)}</div>
+                    </div>
+                `;
+            }).join('');
         }
 
         // 处理文件上传
@@ -856,7 +1417,9 @@
             
             try {
                 const arrayBuffer = await file.arrayBuffer();
-                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                const base64Data = arrayBufferToBase64(arrayBuffer);
+                const pdfBuffer = base64ToArrayBuffer(base64Data);
+                const pdf = await pdfjsLib.getDocument({ data: pdfBuffer }).promise;
                 
                 // 提取所有页面文本
                 const texts = {};
@@ -866,28 +1429,23 @@
                     texts[i] = textContent.items.map(item => item.str).join(' ');
                 }
 
-                // 保存书籍信息
-                const books = JSON.parse(localStorage.getItem('pdfBooks') || '[]');
                 const bookData = {
-                    id: Date.now(),
+                    id: Date.now().toString(),
                     name: file.name.replace('.pdf', ''),
-                    data: arrayBufferToBase64(arrayBuffer),
+                    data: base64Data,
                     pages: pdf.numPages,
                     texts: texts,
                     date: new Date().toISOString()
                 };
                 
-                books.unshift(bookData);
-                localStorage.setItem('pdfBooks', JSON.stringify(books));
+                await saveBookToDB(bookData);
                 
-                // 清空input
                 event.target.value = '';
-                
                 showToast('PDF加载成功！');
                 loadBooks();
                 
                 // 直接打开
-                openBook(0);
+                openBook(bookData.id);
             } catch (error) {
                 console.error('Error loading PDF:', error);
                 showToast('PDF加载失败: ' + error.message);
@@ -915,42 +1473,51 @@
         }
 
         // 打开书籍
-        async function openBook(index) {
-            const books = JSON.parse(localStorage.getItem('pdfBooks') || '[]');
-            currentBook = books[index];
-            
-            document.getElementById('currentBookTitle').textContent = currentBook.name;
-            
+        async function openBook(bookId) {
+            const books = await getAllBooks();
+            currentBook = books.find(b => b.id === bookId);
+
+            if (!currentBook) {
+                showToast('书籍不存在');
+                return;
+            }
+
+            document.getElementById('chatBookTitle').textContent = currentBook.name;
+
             // 加载PDF
             const arrayBuffer = base64ToArrayBuffer(currentBook.data);
             pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
             totalPages = pdfDoc.numPages;
             pageTexts = currentBook.texts;
-            
-            document.getElementById('totalPages').textContent = totalPages;
-            
-            // 显示阅读视图
-            document.getElementById('bookshelf').style.display = 'none';
-            document.getElementById('reader').style.display = 'flex';
-            
-            // 渲染第一页
-            await renderPage(1);
-            
+            pageCanvases = {};
+            currentPage = 1;
+            oneTimeModel = null; // 重置一次性模型
+
+            document.getElementById('pageIndicator').textContent = `第1页 / 共${totalPages}页`;
+
+            // 显示聊天视图
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById('chatView').classList.add('active');
+            document.querySelector('.bottom-nav').style.display = 'none';
+
+            // 渲染模型图标栏
+            renderModelIcons();
+
             // 加载聊天历史
-            loadChatHistory();
+            await loadChatHistory();
         }
 
-        // 渲染页面
-        async function renderPage(pageNum) {
-            currentPage = pageNum;
-            document.getElementById('pageInput').value = pageNum;
+        // 渲染页面到canvas
+        async function renderPageToCanvas(pageNum, scale = 1.5) {
+            if (pageCanvases[pageNum]) {
+                return pageCanvases[pageNum];
+            }
             
             const page = await pdfDoc.getPage(pageNum);
-            const viewport = page.getViewport({ scale: 1.5 });
+            const viewport = page.getViewport({ scale: scale });
             
-            const canvas = document.getElementById('pdfCanvas');
+            const canvas = document.createElement('canvas');
             const context = canvas.getContext('2d');
-            
             canvas.height = viewport.height;
             canvas.width = viewport.width;
             
@@ -959,75 +1526,127 @@
                 viewport: viewport
             }).promise;
             
-            // 更新导航按钮状态
-            document.getElementById('prevBtn').disabled = pageNum <= 1;
-            document.getElementById('nextBtn').disabled = pageNum >= totalPages;
+            pageCanvases[pageNum] = canvas;
+            return canvas;
         }
 
-        // 页面导航
-        async function goToPrevPage() {
-            if (currentPage > 1) {
-                await renderPage(currentPage - 1);
+        // 显示PDF预览
+        async function showPdfPreview(pages) {
+            const preview = document.getElementById('pdfPreview');
+            const scroll = document.getElementById('pdfPagesScroll');
+            
+            scroll.innerHTML = '';
+            
+            for (const pageNum of pages) {
+                const canvas = await renderPageToCanvas(pageNum, 1.2);
+                const wrapper = document.createElement('div');
+                wrapper.className = 'pdf-page-thumb';
+                
+                const thumbCanvas = document.createElement('canvas');
+                thumbCanvas.width = canvas.width * 0.5;
+                thumbCanvas.height = canvas.height * 0.5;
+                const ctx = thumbCanvas.getContext('2d');
+                ctx.drawImage(canvas, 0, 0, thumbCanvas.width, thumbCanvas.height);
+                
+                wrapper.appendChild(thumbCanvas);
+                const pageNumDiv = document.createElement('div');
+                pageNumDiv.className = 'page-num';
+                pageNumDiv.textContent = `第${pageNum}页`;
+                wrapper.appendChild(pageNumDiv);
+                
+                // 点击放大
+                wrapper.onclick = (e) => {
+                    e.stopPropagation();
+                    openLightbox(canvas.toDataURL('image/jpeg', 0.9), pageNum);
+                };
+                
+                scroll.appendChild(wrapper);
             }
+            
+            preview.classList.add('show');
         }
 
-        async function goToNextPage() {
-            if (currentPage < totalPages) {
-                await renderPage(currentPage + 1);
-            }
+        function hidePdfPreview() {
+            document.getElementById('pdfPreview').classList.remove('show');
         }
 
-        async function goToPage() {
-            const pageNum = parseInt(document.getElementById('pageInput').value);
-            if (pageNum >= 1 && pageNum <= totalPages) {
-                await renderPage(pageNum);
-            } else {
-                document.getElementById('pageInput').value = currentPage;
-            }
+        // 图片放大查看
+        function openLightbox(imgSrc, pageNum) {
+            const lightbox = document.getElementById('lightbox');
+            const img = document.getElementById('lightboxImg');
+            const pageDiv = document.getElementById('lightboxPage');
+            
+            img.src = imgSrc;
+            pageDiv.textContent = `第 ${pageNum} 页`;
+            lightbox.classList.add('show');
         }
 
-        // 显示书架
-        function showBookshelf() {
-            document.getElementById('reader').style.display = 'none';
-            document.getElementById('bookshelf').style.display = 'flex';
+        function closeLightbox() {
+            document.getElementById('lightbox').classList.remove('show');
+        }
+
+        // 关闭聊天视图
+        function closeChatView() {
+            document.getElementById('chatView').classList.remove('active');
+            document.querySelector('.bottom-nav').style.display = 'flex';
+            switchPage('books');
             currentBook = null;
             pdfDoc = null;
+            hidePdfPreview();
         }
 
         // 删除书籍
-        function deleteBook(event, index) {
+        async function deleteBook(event, bookId) {
             event.stopPropagation();
             if (confirm('确定要删除这本书吗？')) {
-                const books = JSON.parse(localStorage.getItem('pdfBooks') || '[]');
-                books.splice(index, 1);
-                localStorage.setItem('pdfBooks', JSON.stringify(books));
-                loadBooks();
+                await deleteBookFromDB(bookId);
                 showToast('书籍已删除');
+                loadBooks();
+                loadChats();
             }
         }
 
         // 加载聊天历史
-        function loadChatHistory() {
+        async function loadChatHistory() {
             const messages = document.getElementById('chatMessages');
-            const history = JSON.parse(localStorage.getItem(`chat_${currentBook.id}`) || '[]');
+            const chat = await getChatByBookId(currentBook.id);
             
-            if (history.length === 0) {
+            if (!chat || chat.messages.length === 0) {
                 messages.innerHTML = `
                     <div class="message assistant">
                         <div class="message-content">
-                            👋 你好！我是PDF智能助手。你可以向我提问关于当前页面内容的问题。
-                            <br><br>
-                            💡 提示：输入 @ 可以选择不同的AI模型
+                            👋 你好！我是PDF智能助手。<br><br>
+                            你可以这样问我：<br>
+                            • "帮我分析前三页的内容"<br>
+                            • "第5页讲了什么？"<br>
+                            • "总结第1-10页的重点"<br><br>
+                            💡 输入 @ 可以选择不同的AI模型
                         </div>
                     </div>
                 `;
             } else {
-                messages.innerHTML = history.map(msg => `
-                    <div class="message ${msg.role}">
-                        ${msg.model ? `<div class="model-tag">${msg.model}</div>` : ''}
-                        <div class="message-content">${formatMessage(msg.content)}</div>
-                    </div>
-                `).join('');
+                messages.innerHTML = chat.messages.map(msg => {
+                    let pagesHtml = '';
+                    if (msg.pages && msg.pages.length > 0) {
+                        pagesHtml = `<div class="pages-tag">📖 第${msg.pages.join(', ')}页</div>`;
+                    }
+                    
+                    let screenshotsHtml = '';
+                    if (msg.screenshots && msg.screenshots.length > 0) {
+                        screenshotsHtml = `<div class="message-pages">
+                            ${msg.screenshots.map(s => `<img src="${s}" class="message-page-img">`).join('')}
+                        </div>`;
+                    }
+                    
+                    return `
+                        <div class="message ${msg.role}">
+                            ${msg.role === 'assistant' && msg.model ? `<div class="model-tag">${msg.model}</div>` : ''}
+                            ${pagesHtml}
+                            ${screenshotsHtml}
+                            <div class="message-content">${formatMessage(msg.content)}</div>
+                        </div>
+                    `;
+                }).join('');
             }
             
             scrollToBottom();
@@ -1038,51 +1657,100 @@
             return content.replace(/\n/g, '<br>');
         }
 
-        // 保存聊天历史
-        function saveChatHistory(role, content, model = null) {
-            const history = JSON.parse(localStorage.getItem(`chat_${currentBook.id}`) || '[]');
-            history.push({ role, content, model, timestamp: Date.now() });
-            localStorage.setItem(`chat_${currentBook.id}`, JSON.stringify(history));
+        // 保存聊天消息
+        async function saveChatMessage(role, content, model = null, pages = null, screenshots = null) {
+            let chat = await getChatByBookId(currentBook.id);
+            
+            if (!chat) {
+                chat = {
+                    id: currentBook.id,
+                    bookId: currentBook.id,
+                    messages: [],
+                    lastUpdate: new Date().toISOString()
+                };
+            }
+            
+            chat.messages.push({
+                role,
+                content,
+                model,
+                pages,
+                screenshots,
+                timestamp: Date.now()
+            });
+            
+            chat.lastUpdate = new Date().toISOString();
+            await saveChatToDB(chat);
         }
 
         // 处理输入
         function handleInput(event) {
-            const value = event.target.value;
-            const selector = document.getElementById('modelSelector');
-            
-            if (value.endsWith('@')) {
-                selector.classList.add('show');
-            } else if (!value.includes('@')) {
-                selector.classList.remove('show');
-            }
+            // 自动调整高度
+            event.target.style.height = 'auto';
+            event.target.style.height = Math.min(event.target.scrollHeight, 120) + 'px';
         }
 
         // 选择模型
-        function selectModel(modelId, modelName) {
-            selectedModel = modelId;
-            const input = document.getElementById('promptInput');
-            const value = input.value;
+        // 解析页码
+        function parsePages(text) {
+            const pages = new Set();
             
-            // 替换@为模型名
-            if (value.endsWith('@')) {
-                input.value = value.slice(0, -1) + `@${modelName} `;
+            // 匹配 "前三页"、"前5页"
+            let match = text.match(/前(\d+|[一二三四五六七八九十]+)页/);
+            if (match) {
+                let num = match[1];
+                if (/^[一二三四五六七八九十]+$/.test(num)) {
+                    const cnNums = {'一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9,'十':10};
+                    num = cnNums[num] || 1;
+                } else {
+                    num = parseInt(num);
+                }
+                for (let i = 1; i <= Math.min(num, totalPages); i++) {
+                    pages.add(i);
+                }
             }
             
-            document.getElementById('modelSelector').classList.remove('show');
-            input.focus();
+            // 匹配 "第1-5页"、"第1到5页"
+            match = text.match(/第(\d+)[-到](\d+)页/);
+            if (match) {
+                const start = parseInt(match[1]);
+                const end = parseInt(match[2]);
+                for (let i = start; i <= Math.min(end, totalPages); i++) {
+                    pages.add(i);
+                }
+            }
+            
+            // 匹配 "第1页"、"第5页"
+            match = text.match(/第(\d+)页/g);
+            if (match) {
+                match.forEach(m => {
+                    const num = parseInt(m.match(/\d+/)[0]);
+                    if (num >= 1 && num <= totalPages) {
+                        pages.add(num);
+                    }
+                });
+            }
+            
+            return Array.from(pages).sort((a, b) => a - b);
         }
 
         // 发送消息
         async function sendMessage() {
             const input = document.getElementById('promptInput');
             const message = input.value.trim();
-            
+
             if (!message) return;
-            
-            // 检测模型选择
-            let modelId = 'zhipu'; // 默认
+
+            // 模型选择优先级：oneTimeModel > @提及 > 默认模型
+            let modelId = defaultModel; // 默认使用默认模型
             let actualMessage = message;
-            
+
+            // 1. 检查是否有一次性模型（点击图标选择的）
+            if (oneTimeModel) {
+                modelId = oneTimeModel;
+            }
+
+            // 2. 检查是否有 @ 提及（优先级最高）
             const atMatch = message.match(/@([^\s]+)\s*(.*)/);
             if (atMatch) {
                 const modelName = atMatch[1];
@@ -1094,13 +1762,27 @@
                     }
                 }
             }
-            
-            // 添加用户消息
-            addMessage('user', actualMessage, models[modelId].name);
-            saveChatHistory('user', actualMessage, models[modelId].name);
-            
+
+            // 解析页码
+            const requestedPages = parsePages(message);
+
+            // 生成页面截图
+            let screenshots = [];
+            if (requestedPages.length > 0) {
+                for (const pageNum of requestedPages) {
+                    const canvas = await renderPageToCanvas(pageNum, 0.5);
+                    screenshots.push(canvas.toDataURL('image/jpeg', 0.7));
+                }
+                showPdfPreview(requestedPages);
+            }
+
+            // 添加用户消息（不传screenshots，避免重复显示）
+            addMessageToUI('user', actualMessage, null, requestedPages, null);
+            await saveChatMessage('user', actualMessage, null, requestedPages, screenshots);
+
             input.value = '';
-            
+            input.style.height = 'auto';
+
             // 显示加载状态
             const loadingDiv = document.createElement('div');
             loadingDiv.className = 'message assistant';
@@ -1112,72 +1794,97 @@
             `;
             document.getElementById('chatMessages').appendChild(loadingDiv);
             scrollToBottom();
-            
+
             try {
-                // 获取当前页面文本
-                const pageContent = pageTexts[currentPage] || '';
-                
-                // 调用API
-                const response = await callModelAPI(modelId, actualMessage, pageContent);
-                
-                // 移除加载状态
+                // 获取页面文本
+                let pageContent = '';
+                let pagesToUse = requestedPages.length > 0 ? requestedPages : [currentPage];
+
+                pagesToUse.forEach(p => {
+                    pageContent += `\n\n=== 第${p}页 ===\n${pageTexts[p] || ''}`;
+                });
+
+                const response = await callModelAPI(modelId, actualMessage, pageContent, pagesToUse);
+
                 loadingDiv.remove();
-                
-                // 添加回复
-                addMessage('assistant', response, models[modelId].name);
-                saveChatHistory('assistant', response, models[modelId].name);
+
+                addMessageToUI('assistant', response, models[modelId].name);
+                await saveChatMessage('assistant', response, models[modelId].name);
             } catch (error) {
                 loadingDiv.remove();
-                addMessage('assistant', `错误: ${error.message}`, models[modelId].name);
+                addMessageToUI('assistant', `错误: ${error.message}`, models[modelId].name);
             }
+
+            // 清除一次性模型，下次回复使用默认模型
+            oneTimeModel = null;
+            renderModelIcons();
+
+            loadChats();
         }
 
         // 添加消息到界面
-        function addMessage(role, content, model = null) {
+        function addMessageToUI(role, content, model = null, pages = null, screenshots = null) {
             const messages = document.getElementById('chatMessages');
             const div = document.createElement('div');
             div.className = `message ${role}`;
-            div.innerHTML = `
-                ${model ? `<div class="model-tag">${model}</div>` : ''}
-                <div class="message-content">${formatMessage(content)}</div>
-            `;
+            
+            let html = '';
+            if (role === 'assistant' && model) {
+                html += `<div class="model-tag">${model}</div>`;
+            }
+            if (pages && pages.length > 0) {
+                html += `<div class="pages-tag">📖 第${pages.join(', ')}页</div>`;
+            }
+            if (screenshots && screenshots.length > 0) {
+                html += `<div class="message-pages">
+                    ${screenshots.map(s => `<img src="${s}" class="message-page-img">`).join('')}
+                </div>`;
+            }
+            html += `<div class="message-content">${formatMessage(content)}</div>`;
+            
+            div.innerHTML = html;
             messages.appendChild(div);
             scrollToBottom();
         }
 
         // 调用模型API
-        async function callModelAPI(modelId, prompt, pageContent) {
+        async function callModelAPI(modelId, prompt, pageContent, pagesToUse) {
             const apiKey = localStorage.getItem(`apiKey_${modelId}`);
             if (!apiKey) {
-                throw new Error(`请先在设置中配置${models[modelId].name}的API密钥`);
+                throw new Error(`请先在"我的"页面配置${models[modelId].name}的API密钥`);
             }
             
             const config = models[modelId];
-            const history = JSON.parse(localStorage.getItem(`chat_${currentBook.id}`) || '[]');
+            const chat = await getChatByBookId(currentBook.id);
             
             // 构建消息历史
             const messages = [
                 {
                     role: 'system',
-                    content: `你是一个专业的文档分析助手。用户正在阅读一个PDF文档，当前是第${currentPage}页，共${totalPages}页。以下是当前页面的内容：\n\n${pageContent}\n\n请基于这个内容回答用户的问题。如果问题涉及其他页面的内容，请告诉用户可以翻页后再提问。`
+                    content: `你是一个专业的文档分析助手。用户正在阅读一个PDF文档"${currentBook.name}"，共${totalPages}页。
+
+当前正在分析第${pagesToUse.join(', ')}页的内容：
+${pageContent}
+
+请基于这些内容回答用户的问题。如果问题涉及其他页面的内容，请告诉用户可以指定其他页码。`
                 }
             ];
             
-            // 添加最近的对话历史（保留最近5轮）
-            const recentHistory = history.slice(-10);
-            for (const msg of recentHistory) {
-                if (msg.role !== 'system') {
-                    messages.push({
-                        role: msg.role,
-                        content: msg.content
-                    });
+            // 添加最近的对话历史
+            if (chat && chat.messages.length > 0) {
+                const recentHistory = chat.messages.slice(-10);
+                for (const msg of recentHistory) {
+                    if (msg.role !== 'system') {
+                        messages.push({
+                            role: msg.role,
+                            content: msg.content
+                        });
+                    }
                 }
             }
             
-            // 添加当前问题
             messages.push({ role: 'user', content: prompt });
             
-            // 根据不同模型调用不同API
             if (modelId === 'qwen') {
                 return await callQwenAPI(apiKey, messages);
             } else {
@@ -1238,28 +1945,45 @@
             return data.output.choices[0].message.content;
         }
 
-        // 显示/隐藏设置
-        function showSettings() {
-            document.getElementById('settingsModal').classList.add('show');
-        }
-
-        function hideSettings() {
-            document.getElementById('settingsModal').classList.remove('show');
-        }
-
         // 加载API密钥
         function loadApiKeys() {
-            ['zhipu', 'deepseek', 'doubao', 'qwen', 'kimi'].forEach(id => {
+            // 加载默认模型设置
+            const savedDefault = localStorage.getItem('defaultModel');
+            if (savedDefault && models[savedDefault]) {
+                defaultModel = savedDefault;
+            }
+            updateDefaultModelUI();
+
+            // 加载大模型API密钥
+            ['zhipu', 'deepseek', 'doubao', 'qwen', 'kimi', 'longcat'].forEach(id => {
                 const key = localStorage.getItem(`apiKey_${id}`);
                 if (key) {
                     document.getElementById(`${id}Key`).value = key;
                 }
             });
+
+            // 加载百度语音配置
+            const baiduAppId = localStorage.getItem('baiduAppId');
+            const baiduApiKey = localStorage.getItem('baiduApiKey');
+            const baiduSecretKey = localStorage.getItem('baiduSecretKey');
+            if (baiduAppId) document.getElementById('baiduAppId').value = baiduAppId;
+            if (baiduApiKey) document.getElementById('baiduApiKey').value = baiduApiKey;
+            if (baiduSecretKey) document.getElementById('baiduSecretKey').value = baiduSecretKey;
+
+            // 加载讯飞语音配置
+            const xunfeiAppId = localStorage.getItem('xunfeiAppId');
+            const xunfeiApiKey = localStorage.getItem('xunfeiApiKey');
+            if (xunfeiAppId) document.getElementById('xunfeiAppId').value = xunfeiAppId;
+            if (xunfeiApiKey) document.getElementById('xunfeiApiKey').value = xunfeiApiKey;
+
+            // 渲染模型图标
+            renderModelIcons();
         }
 
         // 保存设置
         function saveSettings() {
-            ['zhipu', 'deepseek', 'doubao', 'qwen', 'kimi'].forEach(id => {
+            // 保存大模型API密钥
+            ['zhipu', 'deepseek', 'doubao', 'qwen', 'kimi', 'longcat'].forEach(id => {
                 const key = document.getElementById(`${id}Key`).value.trim();
                 if (key) {
                     localStorage.setItem(`apiKey_${id}`, key);
@@ -1267,54 +1991,397 @@
                     localStorage.removeItem(`apiKey_${id}`);
                 }
             });
-            
-            hideSettings();
+
+            // 保存百度语音配置
+            const baiduAppId = document.getElementById('baiduAppId').value.trim();
+            const baiduApiKey = document.getElementById('baiduApiKey').value.trim();
+            const baiduSecretKey = document.getElementById('baiduSecretKey').value.trim();
+            if (baiduAppId) localStorage.setItem('baiduAppId', baiduAppId);
+            else localStorage.removeItem('baiduAppId');
+            if (baiduApiKey) localStorage.setItem('baiduApiKey', baiduApiKey);
+            else localStorage.removeItem('baiduApiKey');
+            if (baiduSecretKey) localStorage.setItem('baiduSecretKey', baiduSecretKey);
+            else localStorage.removeItem('baiduSecretKey');
+
+            // 保存讯飞语音配置
+            const xunfeiAppId = document.getElementById('xunfeiAppId').value.trim();
+            const xunfeiApiKey = document.getElementById('xunfeiApiKey').value.trim();
+            if (xunfeiAppId) localStorage.setItem('xunfeiAppId', xunfeiAppId);
+            else localStorage.removeItem('xunfeiAppId');
+            if (xunfeiApiKey) localStorage.setItem('xunfeiApiKey', xunfeiApiKey);
+            else localStorage.removeItem('xunfeiApiKey');
+
             showToast('设置已保存');
         }
 
+        // 设置默认模型
+        function setDefaultModel(modelId) {
+            defaultModel = modelId;
+            localStorage.setItem('defaultModel', modelId);
+            updateDefaultModelUI();
+            renderModelIcons();
+            showToast(`${models[modelId].name} 已设为默认模型`);
+        }
+
+        // 更新默认模型UI
+        function updateDefaultModelUI() {
+            ['zhipu', 'deepseek', 'doubao', 'qwen', 'kimi', 'longcat'].forEach(id => {
+                const item = document.getElementById(`${id}KeyItem`);
+                if (item) {
+                    if (id === defaultModel) {
+                        item.classList.add('is-default');
+                    } else {
+                        item.classList.remove('is-default');
+                    }
+                }
+            });
+        }
+
+        // 渲染模型图标栏（只显示非默认模型）
+        function renderModelIcons() {
+            const bar = document.getElementById('modelIconsBar');
+            if (!bar) return;
+
+            let html = '';
+            const modelOrder = ['zhipu', 'deepseek', 'doubao', 'qwen', 'kimi', 'longcat'];
+
+            modelOrder.forEach(id => {
+                // 默认模型不显示在图标栏
+                if (id === defaultModel) return;
+
+                const m = models[id];
+                const key = localStorage.getItem(`apiKey_${id}`);
+                const hasKey = !!key;
+                const isActive = oneTimeModel === id;
+
+                // 显示所有模型，没有密钥的用透明度区分
+                html += `<div class="model-icon ${id} ${isActive ? 'active' : ''} ${!hasKey ? 'no-key' : ''}" 
+                    onclick="selectModelOnce('${id}')" 
+                    title="${m.name}${!hasKey ? ' (未配置密钥)' : ''}">${m.icon}</div>`;
+            });
+
+            bar.innerHTML = html;
+        }
+
+        // 一次性选择模型（回答完自动切回默认）
+        function selectModelOnce(modelId) {
+            const input = document.getElementById('promptInput');
+
+            if (oneTimeModel === modelId) {
+                // 再次点击取消选择
+                oneTimeModel = null;
+                input.value = '';
+            } else {
+                oneTimeModel = modelId;
+                // 在输入框显示 @模型名
+                input.value = `@${models[modelId].name} `;
+                input.focus();
+            }
+            renderModelIcons();
+        }
+
         // 语音识别
+        let audioContext = null;
+        let mediaRecorder = null;
+        let audioChunks = [];
+
+        // 检测使用哪种语音识别
+        function getSpeechProvider() {
+            const baiduApiKey = localStorage.getItem('baiduApiKey');
+            const baiduSecretKey = localStorage.getItem('baiduSecretKey');
+            const xunfeiAppId = localStorage.getItem('xunfeiAppId');
+            const xunfeiApiKey = localStorage.getItem('xunfeiApiKey');
+
+            if (baiduApiKey && baiduSecretKey) {
+                return 'baidu';
+            } else if (xunfeiAppId && xunfeiApiKey) {
+                return 'xunfei';
+            } else if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                return 'web';
+            }
+            return null;
+        }
+
         function initSpeechRecognition() {
+            // 初始化 Web Speech API 作为备选
             if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
                 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                 recognition = new SpeechRecognition();
                 recognition.continuous = false;
                 recognition.interimResults = true;
                 recognition.lang = 'zh-CN';
-                
+
                 recognition.onresult = (event) => {
                     const transcript = event.results[0][0].transcript;
                     document.getElementById('promptInput').value = transcript;
                 };
-                
+
                 recognition.onend = () => {
                     isRecording = false;
-                    document.getElementById('voiceBtn').classList.remove('recording');
+                    hideVoiceToast();
+                    document.getElementById('voiceInputBtn').classList.remove('recording');
+                    const input = document.getElementById('promptInput');
+                    if (input.value.trim()) {
+                        sendMessage();
+                    }
                 };
-                
+
                 recognition.onerror = (event) => {
                     console.error('Speech recognition error:', event.error);
-                    showToast('语音识别失败');
+                    hideVoiceToast();
                     isRecording = false;
-                    document.getElementById('voiceBtn').classList.remove('recording');
+                    document.getElementById('voiceInputBtn').classList.remove('recording');
+                    if (event.error === 'not-allowed') {
+                        showToast('请允许麦克风权限');
+                    } else if (event.error === 'network') {
+                        showToast('网络错误');
+                    } else {
+                        showToast('语音识别失败');
+                    }
                 };
+            }
+
+            // 初始化语音输入按钮事件
+            initVoiceInputButton();
+        }
+
+        // 初始化语音输入按钮
+        function initVoiceInputButton() {
+            const btn = document.getElementById('voiceInputBtn');
+            if (!btn) return;
+
+            // 触摸事件
+            btn.addEventListener('touchstart', handleVoiceStart, { passive: false });
+            btn.addEventListener('touchmove', handleVoiceMove, { passive: false });
+            btn.addEventListener('touchend', handleVoiceEnd, { passive: false });
+            btn.addEventListener('touchcancel', handleVoiceEnd, { passive: false });
+
+            // 鼠标事件（PC端）
+            btn.addEventListener('mousedown', handleVoiceStart);
+            btn.addEventListener('mousemove', handleVoiceMove);
+            btn.addEventListener('mouseup', handleVoiceEnd);
+            btn.addEventListener('mouseleave', handleVoiceEnd);
+        }
+
+        // 开始语音
+        async function handleVoiceStart(e) {
+            e.preventDefault();
+
+            const provider = getSpeechProvider();
+            if (!provider) {
+                showToast('请先在"我的"页面配置语音API，或部署到HTTPS');
+                return;
+            }
+
+            isRecording = true;
+            isVoiceCancel = false;
+            voiceStartY = e.touches ? e.touches[0].clientY : e.clientY;
+
+            document.getElementById('voiceInputBtn').classList.add('recording');
+            showVoiceToast();
+
+            if (provider === 'baidu' || provider === 'xunfei') {
+                // 使用第三方API：录音
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    mediaRecorder = new MediaRecorder(stream);
+                    audioChunks = [];
+
+                    mediaRecorder.ondataavailable = (e) => {
+                        audioChunks.push(e.data);
+                    };
+
+                    mediaRecorder.start();
+                } catch (err) {
+                    console.error('录音启动失败:', err);
+                    showToast('无法访问麦克风');
+                    handleVoiceEnd(e);
+                }
+            } else if (provider === 'web') {
+                // 使用 Web Speech API
+                try {
+                    recognition.start();
+                } catch (err) {
+                    console.error('Recognition start error:', err);
+                }
             }
         }
 
-        function toggleVoice() {
-            if (!recognition) {
-                showToast('您的浏览器不支持语音识别');
+        // 移动判断是否取消
+        function handleVoiceMove(e) {
+            if (!isRecording) return;
+            e.preventDefault();
+
+            const currentY = e.touches ? e.touches[0].clientY : e.clientY;
+            const diff = voiceStartY - currentY;
+
+            if (diff > 50) {
+                isVoiceCancel = true;
+                showVoiceToast(true);
+            } else {
+                isVoiceCancel = false;
+                showVoiceToast(false);
+            }
+        }
+
+        // 结束语音
+        async function handleVoiceEnd(e) {
+            if (!isRecording) return;
+
+            isRecording = false;
+            document.getElementById('voiceInputBtn').classList.remove('recording');
+            hideVoiceToast();
+
+            const provider = getSpeechProvider();
+
+            if (isVoiceCancel) {
+                // 取消发送
+                if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                    mediaRecorder.stop();
+                    mediaRecorder.stream.getTracks().forEach(t => t.stop());
+                }
+                if (recognition) {
+                    try { recognition.stop(); } catch (err) {}
+                }
+                document.getElementById('promptInput').value = '';
+                showToast('已取消');
                 return;
             }
-            
-            if (isRecording) {
-                recognition.stop();
-                isRecording = false;
-                document.getElementById('voiceBtn').classList.remove('recording');
+
+            // 使用第三方API识别
+            if (provider === 'baidu' || provider === 'xunfei') {
+                if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                    mediaRecorder.onstop = async () => {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                        try {
+                            const text = await recognizeSpeech(provider, audioBlob);
+                            if (text) {
+                                document.getElementById('promptInput').value = text;
+                                sendMessage();
+                            }
+                        } catch (err) {
+                            console.error('语音识别失败:', err);
+                            showToast('语音识别失败');
+                        }
+                        mediaRecorder.stream.getTracks().forEach(t => t.stop());
+                    };
+                    mediaRecorder.stop();
+                }
+            } else if (provider === 'web') {
+                // Web Speech API 自动处理
+                if (recognition) {
+                    try { recognition.stop(); } catch (err) {}
+                }
+            }
+        }
+
+        // 调用语音识别API
+        async function recognizeSpeech(provider, audioBlob) {
+            if (provider === 'baidu') {
+                return await baiduSpeechRecognize(audioBlob);
+            } else if (provider === 'xunfei') {
+                return await xunfeiSpeechRecognize(audioBlob);
+            }
+            return null;
+        }
+
+        // 百度语音识别
+        async function baiduSpeechRecognize(audioBlob) {
+            const apiKey = localStorage.getItem('baiduApiKey');
+            const secretKey = localStorage.getItem('baiduSecretKey');
+
+            // 获取 access_token
+            const tokenRes = await fetch(`https://aip.baidubce.com/oauth/2.0/token?grant_type=client_credentials&client_id=${apiKey}&client_secret=${secretKey}`);
+            const tokenData = await tokenRes.json();
+            const accessToken = tokenData.access_token;
+
+            if (!accessToken) {
+                throw new Error('获取百度token失败');
+            }
+
+            // 转换音频为base64
+            const arrayBuffer = await audioBlob.arrayBuffer();
+            const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+
+            // 调用识别API
+            const res = await fetch(`https://vop.baidu.com/server_api?cuid=pdf_chat_app&token=${accessToken}&dev_pid=1537`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    format: 'wav',
+                    rate: 16000,
+                    channel: 1,
+                    speech: base64Audio,
+                    len: arrayBuffer.byteLength
+                })
+            });
+
+            const data = await res.json();
+            if (data.err_no === 0 && data.result && data.result.length > 0) {
+                return data.result[0];
+            }
+            throw new Error(data.err_msg || '识别失败');
+        }
+
+        // 讯飞语音识别（简化版，需要WebSocket）
+        async function xunfeiSpeechRecognize(audioBlob) {
+            // 讯飞语音识别需要WebSocket，在纯前端实现较复杂
+            // 建议使用讯飞的WebAPI或SDK
+            showToast('讯飞语音需要WebSocket支持，建议使用百度语音');
+            return null;
+        }
+
+        // 显示语音提示
+        function showVoiceToast(isCancel = false) {
+            const toast = document.getElementById('voiceToast');
+            const text = document.getElementById('voiceToastText');
+
+            if (isCancel) {
+                toast.classList.add('cancel');
+                text.textContent = '松开取消';
             } else {
-                recognition.start();
-                isRecording = true;
-                document.getElementById('voiceBtn').classList.add('recording');
-                showToast('开始语音识别...');
+                toast.classList.remove('cancel');
+                text.textContent = '松开发送，上滑取消';
+            }
+
+            toast.classList.add('show');
+        }
+
+        // 隐藏语音提示
+        function hideVoiceToast() {
+            document.getElementById('voiceToast').classList.remove('show');
+        }
+
+        // 切换输入模式
+        function toggleInputMode() {
+            const voiceMode = document.getElementById('voiceMode');
+            const textMode = document.getElementById('textMode');
+            const switchIcon = document.getElementById('modeSwitchIcon');
+
+            if (inputMode === 'voice') {
+                inputMode = 'text';
+                voiceMode.style.display = 'none';
+                textMode.style.display = 'flex';
+                switchIcon.textContent = '🎤';
+            } else {
+                inputMode = 'voice';
+                voiceMode.style.display = 'block';
+                textMode.style.display = 'none';
+                switchIcon.textContent = '⌨️';
+            }
+
+            // 保存设置
+            localStorage.setItem('inputMode', inputMode);
+        }
+
+        // 加载输入模式设置
+        function loadInputMode() {
+            const saved = localStorage.getItem('inputMode');
+            if (saved === 'text') {
+                toggleInputMode();
             }
         }
 
@@ -1322,20 +2389,6 @@
         function scrollToBottom() {
             const messages = document.getElementById('chatMessages');
             messages.scrollTop = messages.scrollHeight;
-        }
-
-        // 处理聊天区域滚动
-        function handleChatScroll() {
-            const messages = document.getElementById('chatMessages');
-            const btn = document.getElementById('scrollBottomBtn');
-            
-            const isAtBottom = messages.scrollHeight - messages.scrollTop - messages.clientHeight < 50;
-            
-            if (isAtBottom) {
-                btn.classList.remove('show');
-            } else {
-                btn.classList.add('show');
-            }
         }
 
         // Toast提示
