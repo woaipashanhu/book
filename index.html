@@ -2232,44 +2232,6 @@ ${pageContent}
                 try { recognition.stop(); } catch (err) {}
             }
         }
-                }
-                if (recognition) {
-                    try { recognition.stop(); } catch (err) {}
-                }
-                document.getElementById('promptInput').value = '';
-                showToast('已取消');
-                return;
-            }
-
-            // 使用第三方API识别
-            if (provider === 'baidu' || provider === 'xunfei') {
-                if (audioChunks.length > 0) {
-                    try {
-                        // 将PCM数据转换为WAV
-                        const wavBlob = pcmToWav(audioChunks, 16000);
-                        const text = await recognizeSpeech(provider, wavBlob);
-                        if (text) {
-                            document.getElementById('promptInput').value = text;
-                            sendMessage();
-                        }
-                    } catch (err) {
-                        console.error('语音识别失败:', err);
-                        showToast('语音识别失败: ' + err.message);
-                    }
-                    if (audioStream) {
-                        audioStream.getTracks().forEach(t => t.stop());
-                    }
-                    if (audioContext) {
-                        audioContext.close();
-                    }
-                }
-            } else if (provider === 'web') {
-                // Web Speech API 自动处理
-                if (recognition) {
-                    try { recognition.stop(); } catch (err) {}
-                }
-            }
-        }
 
         // 显示语音提示
         function showVoiceToast(isCancel = false) {
