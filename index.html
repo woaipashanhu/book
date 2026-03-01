@@ -10,6 +10,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <!-- PDF.js -->
     <script src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * {
             margin: 0;
@@ -1021,9 +1023,220 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #555;
         }
+
+        /* 登录界面 */
+        .login-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .login-overlay.hidden {
+            display: none;
+        }
+
+        .login-box {
+            background: #1a1a2e;
+            border-radius: 16px;
+            padding: 30px;
+            width: 90%;
+            max-width: 350px;
+            text-align: center;
+        }
+
+        .login-box h2 {
+            color: #fff;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+
+        .login-box input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #444;
+            border-radius: 8px;
+            background: #0f0f1a;
+            color: #e0e0e0;
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+
+        .login-box input:focus {
+            outline: none;
+            border-color: #6c5ce7;
+        }
+
+        .login-box button {
+            width: 100%;
+            padding: 12px;
+            background: #6c5ce7;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+
+        .login-box button:hover {
+            background: #5b4cdb;
+        }
+
+        .login-box .switch-mode {
+            color: #888;
+            font-size: 13px;
+        }
+
+        .login-box .switch-mode a {
+            color: #6c5ce7;
+            cursor: pointer;
+        }
+
+        .login-box .skip-login {
+            color: #666;
+            font-size: 12px;
+            margin-top: 15px;
+        }
+
+        .login-box .skip-login a {
+            color: #888;
+            cursor: pointer;
+        }
+
+        /* 邀请弹窗 */
+        .invite-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 3000;
+        }
+
+        .invite-modal.show {
+            display: flex;
+        }
+
+        .invite-content {
+            background: #1a1a2e;
+            border-radius: 16px;
+            padding: 25px;
+            width: 90%;
+            max-width: 350px;
+            text-align: center;
+        }
+
+        .invite-content h3 {
+            color: #fff;
+            margin-bottom: 15px;
+        }
+
+        .invite-link-box {
+            background: #0f0f1a;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 15px;
+            word-break: break-all;
+            font-size: 12px;
+            color: #6c5ce7;
+        }
+
+        .invite-content button {
+            padding: 10px 20px;
+            background: #6c5ce7;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        .invite-content .close-btn {
+            background: #333;
+        }
+
+        .invite-content .warning {
+            color: #ff6b6b;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+
+        /* 用户信息栏 */
+        .user-info-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 20px;
+            background: #1a1a2e;
+            border-bottom: 1px solid #333;
+        }
+
+        .user-info-bar .user-email {
+            font-size: 13px;
+            color: #888;
+        }
+
+        .user-info-bar .logout-btn {
+            background: none;
+            border: none;
+            color: #ff6b6b;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        /* 邀请按钮 */
+        .invite-btn {
+            background: #2d2d44;
+            border: none;
+            color: #6c5ce7;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+
+        .invite-btn:hover {
+            background: #3d3d54;
+        }
     </style>
 </head>
 <body>
+    <!-- 登录界面 -->
+    <div class="login-overlay" id="loginOverlay">
+        <div class="login-box">
+            <h2 id="loginTitle">登录 / 注册</h2>
+            <input type="email" id="loginEmail" placeholder="邮箱地址">
+            <input type="password" id="loginPassword" placeholder="密码">
+            <button onclick="handleLogin()">登录 / 注册</button>
+            <div class="skip-login">
+                <a onclick="skipLogin()">跳过登录（无法使用协作功能）</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 邀请弹窗 -->
+    <div class="invite-modal" id="inviteModal">
+        <div class="invite-content">
+            <h3>邀请朋友加入</h3>
+            <div class="invite-link-box" id="inviteLink"></div>
+            <button onclick="copyInviteLink()">复制链接</button>
+            <button class="close-btn" onclick="closeInviteModal()">关闭</button>
+            <div class="warning">⚠️ 此链接只能使用一次</div>
+        </div>
+    </div>
+
     <div class="app-container">
         <!-- 书籍页面 -->
         <div class="page active" id="booksPage">
@@ -1161,6 +1374,7 @@
                 <button class="back-btn" onclick="closeChatView()">←</button>
                 <div class="chat-title" id="chatBookTitle">书名</div>
                 <div class="page-indicator" id="pageIndicator">第1页 / 共10页</div>
+                <button class="invite-btn" id="inviteBtn" onclick="createInviteLink()">邀请</button>
             </div>
 
             <!-- PDF预览区 -->
@@ -1229,6 +1443,413 @@
     <div class="toast" id="toast"></div>
 
     <script>
+        // ========== Supabase 配置 ==========
+        const SUPABASE_URL = 'https://bfjijwnaopomzouabcwg.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJmamlqd25hb3BvbXpvdWFiY3dnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIzNjQxMzAsImV4cCI6MjA4Nzk0MDEzMH0.gmk_NSUEBGpy1Gf89XoV7MVZkVNwAUst7DF6oweyWeE';
+        
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        let currentUser = null;
+        let currentRoom = null;
+        let isCollaborative = false; // 是否为协作模式
+
+        // 检查登录状态
+        async function checkAuth() {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+                currentUser = session.user;
+                hideLoginOverlay();
+                checkInviteCode();
+            } else {
+                showLoginOverlay();
+            }
+        }
+
+        // 检查URL中的邀请码
+        async function checkInviteCode() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const inviteCode = urlParams.get('invite');
+            if (inviteCode) {
+                const result = await joinRoomByInviteCode(inviteCode);
+                if (result) {
+                    // 清除URL中的邀请码
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+            }
+        }
+
+        // 显示登录界面
+        function showLoginOverlay() {
+            document.getElementById('loginOverlay').classList.remove('hidden');
+        }
+
+        // 隐藏登录界面
+        function hideLoginOverlay() {
+            document.getElementById('loginOverlay').classList.add('hidden');
+        }
+
+        // 处理登录/注册
+        async function handleLogin() {
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value;
+
+            if (!email || !password) {
+                showToast('请输入邮箱和密码');
+                return;
+            }
+
+            showToast('正在登录...');
+
+            // 尝试登录
+            const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
+                email,
+                password
+            });
+
+            if (loginData.user) {
+                currentUser = loginData.user;
+                hideLoginOverlay();
+                showToast('登录成功！');
+                checkInviteCode();
+                return;
+            }
+
+            // 如果登录失败，尝试注册
+            const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+                email,
+                password
+            });
+
+            if (signUpError) {
+                showToast('登录失败: ' + (signUpError.message || loginError?.message));
+                return;
+            }
+
+            if (signUpData.user) {
+                currentUser = signUpData.user;
+                hideLoginOverlay();
+                showToast('注册成功！');
+                checkInviteCode();
+            }
+        }
+
+        // 跳过登录
+        function skipLogin() {
+            hideLoginOverlay();
+            isCollaborative = false;
+            showToast('已跳过登录，无法使用协作功能');
+        }
+
+        // 登出
+        async function handleLogout() {
+            await supabase.auth.signOut();
+            currentUser = null;
+            showLoginOverlay();
+            showToast('已退出登录');
+        }
+
+        // ========== 邀请功能 ==========
+        
+        // 生成随机邀请码
+        function generateInviteCode() {
+            const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+            let code = '';
+            for (let i = 0; i < 8; i++) {
+                code += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return code;
+        }
+
+        // 创建邀请链接
+        async function createInviteLink() {
+            if (!currentUser) {
+                showToast('请先登录');
+                showLoginOverlay();
+                return;
+            }
+
+            if (!currentBook) {
+                showToast('请先选择一本书');
+                return;
+            }
+
+            // 先创建房间
+            const roomData = {
+                name: currentBook.name,
+                book_name: currentBook.name,
+                book_texts: currentBook.texts,
+                total_pages: totalPages,
+                owner_id: currentUser.id
+            };
+
+            // 检查是否已有房间
+            let roomId = currentRoom?.id;
+            if (!roomId) {
+                const { data: room, error: roomError } = await supabase
+                    .from('rooms')
+                    .insert([roomData])
+                    .select()
+                    .single();
+
+                if (roomError) {
+                    showToast('创建房间失败');
+                    console.error(roomError);
+                    return;
+                }
+                roomId = room.id;
+                currentRoom = room;
+
+                // 添加创建者为成员
+                await supabase.from('room_members').insert([{
+                    room_id: roomId,
+                    user_id: currentUser.id,
+                    role: 'owner'
+                }]);
+            }
+
+            // 创建邀请码
+            const inviteCode = generateInviteCode();
+            const { error: inviteError } = await supabase
+                .from('invite_codes')
+                .insert([{
+                    code: inviteCode,
+                    room_id: roomId,
+                    created_by: currentUser.id
+                }]);
+
+            if (inviteError) {
+                showToast('创建邀请码失败');
+                console.error(inviteError);
+                return;
+            }
+
+            // 显示邀请链接
+            const inviteLink = `${window.location.origin}${window.location.pathname}?invite=${inviteCode}`;
+            document.getElementById('inviteLink').textContent = inviteLink;
+            document.getElementById('inviteModal').classList.add('show');
+        }
+
+        // 复制邀请链接
+        function copyInviteLink() {
+            const link = document.getElementById('inviteLink').textContent;
+            navigator.clipboard.writeText(link).then(() => {
+                showToast('链接已复制！');
+            });
+        }
+
+        // 关闭邀请弹窗
+        function closeInviteModal() {
+            document.getElementById('inviteModal').classList.remove('show');
+        }
+
+        // 通过邀请码加入房间
+        async function joinRoomByInviteCode(code) {
+            if (!currentUser) {
+                showToast('请先登录');
+                return false;
+            }
+
+            // 查询邀请码
+            const { data: invite, error: inviteError } = await supabase
+                .from('invite_codes')
+                .select('*, rooms(*)')
+                .eq('code', code)
+                .single();
+
+            if (inviteError || !invite) {
+                showToast('邀请码无效');
+                return false;
+            }
+
+            if (invite.used) {
+                showToast('邀请码已被使用');
+                return false;
+            }
+
+            // 加入房间
+            const { error: memberError } = await supabase
+                .from('room_members')
+                .insert([{
+                    room_id: invite.room_id,
+                    user_id: currentUser.id,
+                    role: 'member'
+                }]);
+
+            if (memberError) {
+                showToast('加入房间失败');
+                return false;
+            }
+
+            // 标记邀请码已使用
+            await supabase
+                .from('invite_codes')
+                .update({ used: true, used_by: currentUser.id })
+                .eq('id', invite.id);
+
+            // 设置当前房间
+            currentRoom = invite.rooms;
+            isCollaborative = true;
+            
+            showToast('已加入协作房间！');
+            
+            // 创建虚拟书籍并加载
+            await loadCollaborativeRoom();
+            
+            return true;
+        }
+
+        // 加载协作房间
+        async function loadCollaborativeRoom() {
+            if (!currentRoom) return;
+
+            // 创建虚拟书籍数据
+            currentBook = {
+                id: currentRoom.id,
+                name: currentRoom.book_name,
+                texts: currentRoom.book_texts || {},
+                pages: currentRoom.total_pages
+            };
+            totalPages = currentRoom.total_pages;
+            pageTexts = currentBook.texts;
+
+            // 显示聊天视图
+            document.getElementById('chatBookTitle').textContent = currentBook.name + ' (协作)';
+            document.getElementById('pageIndicator').textContent = `共${totalPages}页`;
+
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById('chatView').classList.add('active');
+            document.querySelector('.bottom-nav').style.display = 'none';
+
+            // 加载云端消息
+            await loadCloudMessages();
+            
+            // 订阅实时消息
+            subscribeToMessages();
+        }
+
+        // 加载云端消息
+        async function loadCloudMessages() {
+            if (!currentRoom) return;
+
+            const { data: messages, error } = await supabase
+                .from('messages')
+                .select('*')
+                .eq('room_id', currentRoom.id)
+                .order('created_at', { ascending: true });
+
+            if (error) {
+                console.error('加载消息失败:', error);
+                return;
+            }
+
+            const messagesDiv = document.getElementById('chatMessages');
+            messagesDiv.innerHTML = '';
+
+            if (!messages || messages.length === 0) {
+                messagesDiv.innerHTML = `
+                    <div class="message assistant">
+                        <div class="message-wrapper">
+                            <div class="message-content">
+                                👋 欢迎加入协作房间！<br><br>
+                                所有成员都能看到聊天记录，都可以提问。
+                            </div>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            messages.forEach(msg => {
+                addCloudMessageToUI(msg);
+            });
+
+            updateCopyButtonVisibility();
+            scrollToBottom();
+        }
+
+        // 添加云端消息到UI
+        function addCloudMessageToUI(msg) {
+            const messagesDiv = document.getElementById('chatMessages');
+            const div = document.createElement('div');
+            div.className = `message ${msg.role}`;
+            div.dataset.messageId = msg.id;
+
+            const escapedContent = msg.content.replace(/`/g, '\\`').replace(/'/g, "\\'");
+            const wrapper = document.createElement('div');
+            wrapper.className = 'message-wrapper';
+            
+            let html = '';
+            if (msg.role === 'assistant' && msg.model) {
+                html += `<div class="model-tag">${msg.model}</div>`;
+            }
+            if (msg.pages && msg.pages.length > 0) {
+                html += `<div class="pages-tag">📖 第${msg.pages.join(', ')}页</div>`;
+            }
+            html += `<div class="message-content">${formatMessage(msg.content)}</div>`;
+            
+            wrapper.innerHTML = html;
+            
+            const copyBtn = document.createElement('button');
+            copyBtn.className = 'copy-btn';
+            copyBtn.innerHTML = '📋 复制';
+            copyBtn.onclick = (e) => {
+                e.stopPropagation();
+                copyToClipboard(msg.content, copyBtn);
+            };
+            wrapper.appendChild(copyBtn);
+            
+            div.appendChild(wrapper);
+            messagesDiv.appendChild(div);
+        }
+
+        // 订阅实时消息
+        function subscribeToMessages() {
+            if (!currentRoom) return;
+
+            supabase
+                .channel('messages:' + currentRoom.id)
+                .on('postgres_changes', {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'messages',
+                    filter: `room_id=eq.${currentRoom.id}`
+                }, (payload) => {
+                    const msg = payload.new;
+                    // 避免重复添加自己的消息
+                    const existing = document.querySelector(`[data-message-id="${msg.id}"]`);
+                    if (!existing) {
+                        addCloudMessageToUI(msg);
+                        updateCopyButtonVisibility();
+                        scrollToBottom();
+                    }
+                })
+                .subscribe();
+        }
+
+        // 保存消息到云端
+        async function saveMessageToCloud(role, content, model = null, pages = null) {
+            if (!currentRoom || !isCollaborative) return;
+
+            const { data, error } = await supabase
+                .from('messages')
+                .insert([{
+                    room_id: currentRoom.id,
+                    user_id: currentUser.id,
+                    role: role,
+                    content: content,
+                    model: model,
+                    pages: pages
+                }])
+                .select()
+                .single();
+
+            if (error) {
+                console.error('保存消息失败:', error);
+            }
+
+            return data;
+        }
+
         // 等待 pdfjsLib 加载完成并设置 worker
         function initPdfJs() {
             if (typeof pdfjsLib !== 'undefined') {
@@ -1413,6 +2034,20 @@
             loadApiKeys();
             initSpeechRecognition();
             loadInputMode();
+            
+            // 检查Supabase认证状态
+            checkAuth();
+            
+            // 监听认证状态变化
+            supabase.auth.onAuthStateChange((event, session) => {
+                if (event === 'SIGNED_IN') {
+                    currentUser = session.user;
+                    hideLoginOverlay();
+                } else if (event === 'SIGNED_OUT') {
+                    currentUser = null;
+                    showLoginOverlay();
+                }
+            });
         });
 
         // 页面切换
@@ -1881,7 +2516,13 @@
 
             // 添加用户消息（不传screenshots，避免重复显示）
             addMessageToUI('user', actualMessage, null, requestedPages, null);
-            await saveChatMessage('user', actualMessage, null, requestedPages, screenshots);
+            
+            // 协作模式保存到云端
+            if (isCollaborative && currentUser) {
+                await saveMessageToCloud('user', actualMessage, null, requestedPages);
+            } else {
+                await saveChatMessage('user', actualMessage, null, requestedPages, screenshots);
+            }
 
             input.value = '';
             input.style.height = 'auto';
@@ -1923,7 +2564,13 @@
                 loadingDiv.remove();
 
                 addMessageToUI('assistant', response, models[modelId].name);
-                await saveChatMessage('assistant', response, models[modelId].name);
+                
+                // 协作模式保存到云端
+                if (isCollaborative && currentUser) {
+                    await saveMessageToCloud('assistant', response, models[modelId].name, pagesToUse);
+                } else {
+                    await saveChatMessage('assistant', response, models[modelId].name);
+                }
             } catch (error) {
                 loadingDiv.remove();
                 addMessageToUI('assistant', `错误: ${error.message}`, models[modelId].name);
