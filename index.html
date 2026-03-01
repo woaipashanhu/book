@@ -1068,17 +1068,25 @@
                         </div>
                     </div>
 
-                    <!-- 语音识别说明 -->
+                    <!-- 语音识别API设置 -->
                     <div class="settings-group">
-                        <div class="settings-group-title">语音识别</div>
+                        <div class="settings-group-title">语音识别API <span style="color:#888;font-size:11px;">（二选一即可）</span></div>
                         <div class="api-key-item">
-                            <div style="font-size:14px;color:#e0e0e0;margin-bottom:8px;">使用浏览器内置语音识别</div>
-                            <div style="font-size:12px;color:#888;">
-                                ✅ Safari：可离线识别<br>
-                                ✅ Chrome：需联网识别<br>
-                                <br>
-                                按住语音按钮说话即可
+                            <div class="api-key-header">
+                                <label>百度语音</label>
                             </div>
+                            <input type="text" id="baiduAppId" placeholder="App ID" style="margin-bottom:8px;">
+                            <input type="text" id="baiduApiKey" placeholder="API Key">
+                            <input type="password" id="baiduSecretKey" placeholder="Secret Key" style="margin-top:8px;">
+                            <div style="font-size:11px;color:#888;margin-top:8px;">免费额度：每日50000次</div>
+                        </div>
+                        <div class="api-key-item">
+                            <div class="api-key-header">
+                                <label>讯飞语音</label>
+                            </div>
+                            <input type="text" id="xunfeiAppId" placeholder="App ID">
+                            <input type="password" id="xunfeiApiKey" placeholder="API Key" style="margin-top:8px;">
+                            <div style="font-size:11px;color:#888;margin-top:8px;">免费额度：每日50000次</div>
                         </div>
                     </div>
 
@@ -2008,6 +2016,20 @@ ${pageContent}
                 }
             });
 
+            // 加载百度语音配置
+            const baiduAppId = localStorage.getItem('baiduAppId');
+            const baiduApiKey = localStorage.getItem('baiduApiKey');
+            const baiduSecretKey = localStorage.getItem('baiduSecretKey');
+            if (baiduAppId) document.getElementById('baiduAppId').value = baiduAppId;
+            if (baiduApiKey) document.getElementById('baiduApiKey').value = baiduApiKey;
+            if (baiduSecretKey) document.getElementById('baiduSecretKey').value = baiduSecretKey;
+
+            // 加载讯飞语音配置
+            const xunfeiAppId = localStorage.getItem('xunfeiAppId');
+            const xunfeiApiKey = localStorage.getItem('xunfeiApiKey');
+            if (xunfeiAppId) document.getElementById('xunfeiAppId').value = xunfeiAppId;
+            if (xunfeiApiKey) document.getElementById('xunfeiApiKey').value = xunfeiApiKey;
+
             // 渲染模型图标
             renderModelIcons();
         }
@@ -2023,6 +2045,25 @@ ${pageContent}
                     localStorage.removeItem(`apiKey_${id}`);
                 }
             });
+
+            // 保存百度语音配置
+            const baiduAppId = document.getElementById('baiduAppId').value.trim();
+            const baiduApiKey = document.getElementById('baiduApiKey').value.trim();
+            const baiduSecretKey = document.getElementById('baiduSecretKey').value.trim();
+            if (baiduAppId) localStorage.setItem('baiduAppId', baiduAppId);
+            else localStorage.removeItem('baiduAppId');
+            if (baiduApiKey) localStorage.setItem('baiduApiKey', baiduApiKey);
+            else localStorage.removeItem('baiduApiKey');
+            if (baiduSecretKey) localStorage.setItem('baiduSecretKey', baiduSecretKey);
+            else localStorage.removeItem('baiduSecretKey');
+
+            // 保存讯飞语音配置
+            const xunfeiAppId = document.getElementById('xunfeiAppId').value.trim();
+            const xunfeiApiKey = document.getElementById('xunfeiApiKey').value.trim();
+            if (xunfeiAppId) localStorage.setItem('xunfeiAppId', xunfeiAppId);
+            else localStorage.removeItem('xunfeiAppId');
+            if (xunfeiApiKey) localStorage.setItem('xunfeiApiKey', xunfeiApiKey);
+            else localStorage.removeItem('xunfeiApiKey');
 
             showToast('设置已保存');
         }
@@ -2094,19 +2135,30 @@ ${pageContent}
         }
 
         // 语音识别
-        let recognition = null;
+        let audioContext = null;
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let audioStream = null;
 
-        // 检测语音识别可用性
+        // 检测使用哪种语音识别
         function getSpeechProvider() {
-            // 优先使用 Web Speech API（支持 HTTPS 和 localhost）
-            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const baiduApiKey = localStorage.getItem('baiduApiKey');
+            const baiduSecretKey = localStorage.getItem('baiduSecretKey');
+            const xunfeiAppId = localStorage.getItem('xunfeiAppId');
+            const xunfeiApiKey = localStorage.getItem('xunfeiApiKey');
+
+            if (baiduApiKey && baiduSecretKey) {
+                return 'baidu';
+            } else if (xunfeiAppId && xunfeiApiKey) {
+                return 'xunfei';
+            } else if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
                 return 'web';
             }
             return null;
         }
 
         function initSpeechRecognition() {
-            // 初始化 Web Speech API
+            // 初始化 Web Speech API 作为备选
             if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
                 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                 recognition = new SpeechRecognition();
@@ -2172,7 +2224,7 @@ ${pageContent}
 
             const provider = getSpeechProvider();
             if (!provider) {
-                showToast('您的浏览器不支持语音识别，请使用 Safari 或 Chrome');
+                showToast('请先在"我的"页面配置语音API，或部署到HTTPS');
                 return;
             }
 
@@ -2183,12 +2235,39 @@ ${pageContent}
             document.getElementById('voiceInputBtn').classList.add('recording');
             showVoiceToast();
 
-            // 使用 Web Speech API
-            try {
-                recognition.start();
-            } catch (err) {
-                console.error('Recognition start error:', err);
-                showToast('语音识别启动失败，请检查浏览器权限');
+            if (provider === 'baidu' || provider === 'xunfei') {
+                // 使用第三方API：录音（WAV格式）
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 16000, channelCount: 1 } });
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+                    const source = audioContext.createMediaStreamSource(stream);
+                    const processor = audioContext.createScriptProcessor(4096, 1, 1);
+
+                    audioChunks = [];
+                    audioStream = stream;
+
+                    processor.onaudioprocess = (e) => {
+                        if (!isRecording) return;
+                        const inputData = e.inputBuffer.getChannelData(0);
+                        audioChunks.push(new Float32Array(inputData));
+                    };
+
+                    source.connect(processor);
+                    processor.connect(audioContext.destination);
+
+                    mediaRecorder = processor;
+                } catch (err) {
+                    console.error('录音启动失败:', err);
+                    showToast('无法访问麦克风');
+                    handleVoiceEnd(e);
+                }
+            } else if (provider === 'web') {
+                // 使用 Web Speech API
+                try {
+                    recognition.start();
+                } catch (err) {
+                    console.error('Recognition start error:', err);
+                }
             }
         }
 
@@ -2217,8 +2296,16 @@ ${pageContent}
             document.getElementById('voiceInputBtn').classList.remove('recording');
             hideVoiceToast();
 
+            const provider = getSpeechProvider();
+
             if (isVoiceCancel) {
                 // 取消发送
+                if (audioStream) {
+                    audioStream.getTracks().forEach(t => t.stop());
+                }
+                if (audioContext) {
+                    audioContext.close();
+                }
                 if (recognition) {
                     try { recognition.stop(); } catch (err) {}
                 }
@@ -2227,10 +2314,145 @@ ${pageContent}
                 return;
             }
 
-            // Web Speech API 自动处理识别结果
-            if (recognition) {
-                try { recognition.stop(); } catch (err) {}
+            // 使用第三方API识别
+            if (provider === 'baidu' || provider === 'xunfei') {
+                if (audioChunks.length > 0) {
+                    try {
+                        // 将PCM数据转换为WAV
+                        const wavBlob = pcmToWav(audioChunks, 16000);
+                        const text = await recognizeSpeech(provider, wavBlob);
+                        if (text) {
+                            document.getElementById('promptInput').value = text;
+                            sendMessage();
+                        }
+                    } catch (err) {
+                        console.error('语音识别失败:', err);
+                        showToast('语音识别失败: ' + err.message);
+                    }
+                    if (audioStream) {
+                        audioStream.getTracks().forEach(t => t.stop());
+                    }
+                    if (audioContext) {
+                        audioContext.close();
+                    }
+                }
+            } else if (provider === 'web') {
+                // Web Speech API 自动处理
+                if (recognition) {
+                    try { recognition.stop(); } catch (err) {}
+                }
             }
+        }
+
+        // PCM转WAV
+        function pcmToWav(float32Arrays, sampleRate) {
+            // 合并所有音频块
+            let totalLength = 0;
+            for (const arr of float32Arrays) {
+                totalLength += arr.length;
+            }
+            const mergedBuffer = new Float32Array(totalLength);
+            let offset = 0;
+            for (const arr of float32Arrays) {
+                mergedBuffer.set(arr, offset);
+                offset += arr.length;
+            }
+
+            // 转换为16位PCM
+            const samples = mergedBuffer.length;
+            const buffer = new ArrayBuffer(44 + samples * 2);
+            const view = new DataView(buffer);
+
+            // WAV头部
+            writeString(view, 0, 'RIFF');
+            view.setUint32(4, 36 + samples * 2, true);
+            writeString(view, 8, 'WAVE');
+            writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true);
+            view.setUint16(22, 1, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * 2, true);
+            view.setUint16(32, 2, true);
+            view.setUint16(34, 16, true);
+            writeString(view, 36, 'data');
+            view.setUint32(40, samples * 2, true);
+
+            // 写入PCM数据
+            floatTo16BitPCM(view, 44, mergedBuffer);
+
+            return new Blob([buffer], { type: 'audio/wav' });
+        }
+
+        function writeString(view, offset, string) {
+            for (let i = 0; i < string.length; i++) {
+                view.setUint8(offset + i, string.charCodeAt(i));
+            }
+        }
+
+        function floatTo16BitPCM(view, offset, input) {
+            for (let i = 0; i < input.length; i++, offset += 2) {
+                const s = Math.max(-1, Math.min(1, input[i]));
+                view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+            }
+        }
+
+        // 调用语音识别API
+        async function recognizeSpeech(provider, audioBlob) {
+            if (provider === 'baidu') {
+                return await baiduSpeechRecognize(audioBlob);
+            } else if (provider === 'xunfei') {
+                return await xunfeiSpeechRecognize(audioBlob);
+            }
+            return null;
+        }
+
+        // 百度语音识别
+        async function baiduSpeechRecognize(audioBlob) {
+            const apiKey = localStorage.getItem('baiduApiKey');
+            const secretKey = localStorage.getItem('baiduSecretKey');
+
+            // 获取 access_token
+            const tokenRes = await fetch(`https://aip.baidubce.com/oauth/2.0/token?grant_type=client_credentials&client_id=${apiKey}&client_secret=${secretKey}`);
+            const tokenData = await tokenRes.json();
+            const accessToken = tokenData.access_token;
+
+            if (!accessToken) {
+                throw new Error('获取百度token失败');
+            }
+
+            // 转换音频为base64
+            const arrayBuffer = await audioBlob.arrayBuffer();
+            const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+
+            // 调用识别API
+            const res = await fetch(`https://vop.baidu.com/server_api?cuid=pdf_chat_app&token=${accessToken}&dev_pid=1537`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    format: 'wav',
+                    rate: 16000,
+                    channel: 1,
+                    speech: base64Audio,
+                    len: arrayBuffer.byteLength
+                })
+            });
+
+            const data = await res.json();
+            if (data.err_no === 0 && data.result && data.result.length > 0) {
+                return data.result[0];
+            }
+            throw new Error(data.err_msg || '识别失败');
+        }
+
+        // 讯飞语音识别（简化版，需要WebSocket）
+        async function xunfeiSpeechRecognize(audioBlob) {
+            // 讯飞语音识别需要WebSocket，在纯前端实现较复杂
+            // 建议使用讯飞的WebAPI或SDK
+            showToast('讯飞语音需要WebSocket支持，建议使用百度语音');
+            return null;
         }
 
         // 显示语音提示
