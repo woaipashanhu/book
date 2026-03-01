@@ -1068,8 +1068,8 @@
                         </div>
                     </div>
 
-                    <!-- 语音识别API设置 -->
-                    <div class="settings-group">
+                    <!-- 语音识别API设置（暂时隐藏，将来可能启用WebSocket方式）
+                    <div class="settings-group" style="display:none;">
                         <div class="settings-group-title">语音识别API <span style="color:#888;font-size:11px;">（二选一即可）</span></div>
                         <div class="api-key-item">
                             <div class="api-key-header">
@@ -1089,6 +1089,7 @@
                             <div style="font-size:11px;color:#888;margin-top:8px;">免费额度：每日50000次</div>
                         </div>
                     </div>
+                    -->
 
                     <button class="save-btn" onclick="saveSettings()">保存设置</button>
                 </div>
@@ -2142,6 +2143,11 @@ ${pageContent}
 
         // 检测使用哪种语音识别
         function getSpeechProvider() {
+            // 暂时禁用百度/讯飞API（REST API前端无法调用），默认使用Web Speech API
+            // 如需启用WebSocket方式，取消下方注释并修改逻辑
+            return 'web';
+            
+            /*
             const baiduApiKey = localStorage.getItem('baiduApiKey');
             const baiduSecretKey = localStorage.getItem('baiduSecretKey');
             const xunfeiAppId = localStorage.getItem('xunfeiAppId');
@@ -2155,6 +2161,7 @@ ${pageContent}
                 return 'web';
             }
             return null;
+            */
         }
 
         function initSpeechRecognition() {
