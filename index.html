@@ -489,6 +489,49 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.3);
         }
 
+        /* 消息复制按钮 */
+        .message-wrapper {
+            position: relative;
+        }
+
+        .copy-btn {
+            position: absolute;
+            bottom: -8px;
+            left: 8px;
+            background: #333;
+            color: #888;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 11px;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            z-index: 10;
+        }
+
+        .message-wrapper:hover .copy-btn,
+        .message-wrapper:active .copy-btn {
+            opacity: 1;
+        }
+
+        .message-wrapper:last-child .copy-btn {
+            opacity: 1;
+        }
+
+        .copy-btn:active {
+            background: #6c5ce7;
+            color: white;
+        }
+
+        .copy-btn.copied {
+            background: #4CAF50;
+            color: white;
+        }
+
         /* 输入区域 */
         /* 模型快捷图标栏 */
         .model-icons-bar {
@@ -1658,13 +1701,15 @@
             if (!chat || chat.messages.length === 0) {
                 messages.innerHTML = `
                     <div class="message assistant">
-                        <div class="message-content">
-                            👋 你好！我是PDF智能助手。<br><br>
-                            你可以这样问我：<br>
-                            • "帮我分析前三页的内容"<br>
-                            • "第5页讲了什么？"<br>
-                            • "总结第1-10页的重点"<br><br>
-                            💡 输入 @ 可以选择不同的AI模型
+                        <div class="message-wrapper">
+                            <div class="message-content">
+                                👋 你好！我是PDF智能助手。<br><br>
+                                你可以这样问我：<br>
+                                • "帮我分析前三页的内容"<br>
+                                • "第5页讲了什么？"<br>
+                                • "总结第1-10页的重点"<br><br>
+                                💡 输入 @ 可以选择不同的AI模型
+                            </div>
                         </div>
                     </div>
                 `;
@@ -1682,18 +1727,32 @@
                         </div>`;
                     }
                     
+                    // 转义内容用于 onclick
+                    const escapedContent = msg.content.replace(/`/g, '\\`').replace(/'/g, "\\'");
+                    
                     return `
                         <div class="message ${msg.role}">
-                            ${msg.role === 'assistant' && msg.model ? `<div class="model-tag">${msg.model}</div>` : ''}
-                            ${pagesHtml}
-                            ${screenshotsHtml}
-                            <div class="message-content">${formatMessage(msg.content)}</div>
+                            <div class="message-wrapper">
+                                ${msg.role === 'assistant' && msg.model ? `<div class="model-tag">${msg.model}</div>` : ''}
+                                ${pagesHtml}
+                                ${screenshotsHtml}
+                                <div class="message-content">${formatMessage(msg.content)}</div>
+                                <button class="copy-btn" onclick="copyMessageContent(this, \`${escapedContent.replace(/\n/g, '\\n')}\`)">📋 复制</button>
+                            </div>
                         </div>
                     `;
                 }).join('');
+                
+                // 更新复制按钮可见性
+                updateCopyButtonVisibility();
             }
             
             scrollToBottom();
+        }
+
+        // 复制消息内容（用于历史消息）
+        function copyMessageContent(btn, content) {
+            copyToClipboard(content, btn);
         }
 
         // 格式化消息
@@ -1882,7 +1941,11 @@
             const messages = document.getElementById('chatMessages');
             const div = document.createElement('div');
             div.className = `message ${role}`;
-            
+
+            // 创建消息包装器
+            const wrapper = document.createElement('div');
+            wrapper.className = 'message-wrapper';
+
             let html = '';
             if (role === 'assistant' && model) {
                 html += `<div class="model-tag">${model}</div>`;
@@ -1896,10 +1959,56 @@
                 </div>`;
             }
             html += `<div class="message-content">${formatMessage(content)}</div>`;
-            
-            div.innerHTML = html;
+
+            wrapper.innerHTML = html;
+
+            // 添加复制按钮
+            const copyBtn = document.createElement('button');
+            copyBtn.className = 'copy-btn';
+            copyBtn.innerHTML = '📋 复制';
+            copyBtn.onclick = (e) => {
+                e.stopPropagation();
+                copyToClipboard(content, copyBtn);
+            };
+            wrapper.appendChild(copyBtn);
+
+            div.appendChild(wrapper);
             messages.appendChild(div);
             scrollToBottom();
+
+            // 更新之前消息的复制按钮透明度（最新一条保持显示）
+            updateCopyButtonVisibility();
+        }
+
+        // 更新复制按钮可见性
+        function updateCopyButtonVisibility() {
+            const wrappers = document.querySelectorAll('.message-wrapper');
+            wrappers.forEach((wrapper, index) => {
+                const copyBtn = wrapper.querySelector('.copy-btn');
+                if (copyBtn) {
+                    // 最后一条消息的复制按钮始终显示
+                    if (index === wrappers.length - 1) {
+                        copyBtn.style.opacity = '1';
+                    } else {
+                        copyBtn.style.opacity = '';
+                    }
+                }
+            });
+        }
+
+        // 复制到剪贴板
+        function copyToClipboard(text, btn) {
+            navigator.clipboard.writeText(text).then(() => {
+                btn.innerHTML = '✓ 已复制';
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    btn.innerHTML = '📋 复制';
+                    btn.classList.remove('copied');
+                }, 2000);
+            }).catch(err => {
+                console.error('复制失败:', err);
+                showToast('复制失败');
+            });
         }
 
         // 调用模型API
