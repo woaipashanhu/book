@@ -536,6 +536,77 @@
             color: white;
         }
 
+        /* 用户头像 */
+        .message-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .user-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .user-avatar.user {
+            background: #6c5ce7;
+            color: white;
+        }
+
+        .user-avatar.assistant {
+            background: #00a8ff;
+            color: white;
+        }
+
+        .user-nickname {
+            font-size: 12px;
+            color: #888;
+        }
+
+        /* 导航按钮 */
+        .nav-buttons {
+            position: fixed;
+            right: 15px;
+            bottom: 180px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 50;
+        }
+
+        .nav-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #2d2d44;
+            border: none;
+            color: #e0e0e0;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            transition: all 0.2s;
+        }
+
+        .nav-btn:hover {
+            background: #6c5ce7;
+            transform: scale(1.1);
+        }
+
+        .nav-btn:active {
+            transform: scale(0.95);
+        }
+
         /* 输入区域 */
         /* 模型快捷图标栏 */
         .model-icons-bar {
@@ -1239,15 +1310,27 @@
     </style>
 </head>
 <body>
-    <!-- 登录界面 -->
-    <div class="login-overlay" id="loginOverlay">
+    <!-- 登录界面（昵称模式） -->
+    <div class="login-overlay hidden" id="loginOverlay">
         <div class="login-box">
-            <h2 id="loginTitle">登录 / 注册</h2>
-            <input type="email" id="loginEmail" placeholder="邮箱地址">
-            <input type="password" id="loginPassword" placeholder="密码">
-            <button onclick="handleLogin()">登录 / 注册</button>
+            <h2 id="loginTitle">设置你的昵称</h2>
+            <input type="text" id="nicknameInput" placeholder="输入昵称（如：Z）" maxlength="10">
+            <button onclick="handleSetNickname()">确认</button>
             <div class="skip-login">
-                <a onclick="skipLogin()">跳过登录（无法使用协作功能）</a>
+                <a onclick="skipLogin()">跳过（无法使用协作功能）</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 被邀请人输入昵称界面 -->
+    <div class="login-overlay hidden" id="inviteJoinOverlay">
+        <div class="login-box">
+            <h2>加入协作房间</h2>
+            <p style="color:#888;font-size:13px;margin-bottom:15px;">请输入你的昵称</p>
+            <input type="text" id="joinNicknameInput" placeholder="输入昵称（如：L）" maxlength="10">
+            <button onclick="handleJoinWithNickname()">加入房间</button>
+            <div class="skip-login">
+                <a onclick="cancelJoin()">取消</a>
             </div>
         </div>
     </div>
@@ -1304,6 +1387,30 @@
             </div>
             <div class="page-content">
                 <div class="settings-section">
+                    <!-- 用户昵称设置 -->
+                    <div class="settings-group">
+                        <div class="settings-group-title">用户设置</div>
+                        <div class="api-key-item">
+                            <label>我的昵称</label>
+                            <input type="text" id="userNickname" placeholder="输入昵称（如：Z）" maxlength="10">
+                            <div style="font-size:11px;color:#888;margin-top:8px;">协作时显示在消息旁边</div>
+                        </div>
+                    </div>
+
+                    <!-- Supabase配置（协作功能） -->
+                    <div class="settings-group">
+                        <div class="settings-group-title">协作功能配置 <span style="color:#888;font-size:11px;">（可选，用于多人协作）</span></div>
+                        <div class="api-key-item">
+                            <label>Supabase URL</label>
+                            <input type="text" id="supabaseUrl" placeholder="https://xxx.supabase.co">
+                        </div>
+                        <div class="api-key-item">
+                            <label>Supabase Anon Key</label>
+                            <input type="password" id="supabaseKey" placeholder="eyJhbGciOiJIUzI1...">
+                            <div style="font-size:11px;color:#888;margin-top:8px;">不配置则无法使用邀请协作功能</div>
+                        </div>
+                    </div>
+
                     <div class="settings-group">
                         <div class="settings-group-title">API密钥设置 <span style="color:#6c5ce7;font-size:12px;">（点击⭐设为默认模型）</span></div>
                         <div class="api-key-item" id="zhipuKeyItem">
@@ -1455,6 +1562,12 @@
                     <div class="voice-toast-text" id="voiceToastText">松开发送，上滑取消</div>
                 </div>
             </div>
+
+            <!-- 导航按钮 -->
+            <div class="nav-buttons" id="navButtons" style="display:none;">
+                <button class="nav-btn" onclick="navigateToPrevAI()" title="上一段AI对话">▲</button>
+                <button class="nav-btn" onclick="navigateToNextAI()" title="下一段AI对话">▼</button>
+            </div>
         </div>
     </div>
 
@@ -1472,59 +1585,142 @@
 
     <script>
         // ========== Supabase 配置 ==========
-        const SUPABASE_URL = 'https://bfjijwnaopomzouabcwg.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJmamlqd25hb3BvbXpvdWFiY3dnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIzNjQxMzAsImV4cCI6MjA4Nzk0MDEzMH0.gmk_NSUEBGpy1Gf89XoV7MVZkVNwAUst7DF6oweyWeE';
-        
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        
-        let currentUser = null;
+        // ========== Supabase 动态配置 ==========
+        let supabase = null;
+        let supabaseConfigured = false;
+        let currentUser = null;  // 当前用户信息 {id, nickname}
         let currentRoom = null;
-        let isCollaborative = false; // 是否为协作模式
+        let isCollaborative = false;
+        let pendingInviteCode = null;  // 待处理的邀请码
 
-        // 检查登录状态
-        async function checkAuth() {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) {
-                currentUser = session.user;
-                hideLoginOverlay();
-                checkInviteCode();
+        // 初始化Supabase
+        function initSupabase() {
+            const url = localStorage.getItem('supabaseUrl');
+            const key = localStorage.getItem('supabaseKey');
+
+            if (url && key) {
+                try {
+                    supabase = window.supabase.createClient(url, key);
+                    supabaseConfigured = true;
+                    console.log('Supabase 已配置');
+                } catch (e) {
+                    console.error('Supabase 配置失败:', e);
+                    supabaseConfigured = false;
+                }
             } else {
-                showLoginOverlay();
+                supabaseConfigured = false;
             }
         }
 
-        // 检查URL中的邀请码
-        async function checkInviteCode() {
+        // 检查用户状态
+        function checkUserStatus() {
+            const nickname = localStorage.getItem('userNickname');
+            if (nickname) {
+                currentUser = {
+                    id: localStorage.getItem('userId') || generateUserId(),
+                    nickname: nickname
+                };
+                localStorage.setItem('userId', currentUser.id);
+            }
+
+            // 检查URL中的邀请码
             const urlParams = new URLSearchParams(window.location.search);
             const inviteCode = urlParams.get('invite');
             if (inviteCode) {
-                const result = await joinRoomByInviteCode(inviteCode);
-                if (result) {
-                    // 清除URL中的邀请码
-                    window.history.replaceState({}, document.title, window.location.pathname);
+                pendingInviteCode = inviteCode;
+                if (supabaseConfigured) {
+                    showInviteJoinOverlay();
+                } else {
+                    showToast('请先在"我的"页面配置Supabase');
                 }
             }
         }
 
-        // 显示登录界面
+        // 生成用户ID
+        function generateUserId() {
+            return 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        }
+
+        // 显示昵称设置界面
         function showLoginOverlay() {
             document.getElementById('loginOverlay').classList.remove('hidden');
         }
 
-        // 隐藏登录界面
+        // 隐藏昵称设置界面
         function hideLoginOverlay() {
             document.getElementById('loginOverlay').classList.add('hidden');
         }
 
-        // 处理登录/注册
-        async function handleLogin() {
-            const email = document.getElementById('loginEmail').value.trim();
-            const password = document.getElementById('loginPassword').value;
+        // 显示邀请加入界面
+        function showInviteJoinOverlay() {
+            document.getElementById('inviteJoinOverlay').classList.remove('hidden');
+        }
 
-            if (!email || !password) {
-                showToast('请输入邮箱和密码');
+        // 隐藏邀请加入界面
+        function hideInviteJoinOverlay() {
+            document.getElementById('inviteJoinOverlay').classList.add('hidden');
+        }
+
+        // 设置昵称
+        function handleSetNickname() {
+            const nickname = document.getElementById('nicknameInput').value.trim();
+            if (!nickname) {
+                showToast('请输入昵称');
                 return;
             }
+            if (nickname.length > 10) {
+                showToast('昵称最多10个字符');
+                return;
+            }
+
+            currentUser = {
+                id: localStorage.getItem('userId') || generateUserId(),
+                nickname: nickname
+            };
+            localStorage.setItem('userId', currentUser.id);
+            localStorage.setItem('userNickname', nickname);
+            hideLoginOverlay();
+            showToast('昵称已设置：' + nickname);
+        }
+
+        // 跳过设置昵称
+        function skipLogin() {
+            hideLoginOverlay();
+            showToast('已跳过，可在"我的"页面设置昵称');
+        }
+
+        // 处理邀请加入
+        async function handleJoinWithNickname() {
+            const nickname = document.getElementById('joinNicknameInput').value.trim();
+            if (!nickname) {
+                showToast('请输入昵称');
+                return;
+            }
+
+            currentUser = {
+                id: localStorage.getItem('userId') || generateUserId(),
+                nickname: nickname
+            };
+            localStorage.setItem('userId', currentUser.id);
+            localStorage.setItem('userNickname', nickname);
+
+            hideInviteJoinOverlay();
+
+            if (pendingInviteCode) {
+                const result = await joinRoomByInviteCode(pendingInviteCode);
+                if (result) {
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    pendingInviteCode = null;
+                }
+            }
+        }
+
+        // 取消加入
+        function cancelJoin() {
+            hideInviteJoinOverlay();
+            window.history.replaceState({}, document.title, window.location.pathname);
+            pendingInviteCode = null;
+        }
 
             showToast('正在登录...');
 
@@ -1569,15 +1765,17 @@
         }
 
         // 登出
-        async function handleLogout() {
-            await supabase.auth.signOut();
+        // 清除昵称
+        function handleLogout() {
+            localStorage.removeItem('userNickname');
+            localStorage.removeItem('userId');
             currentUser = null;
             showLoginOverlay();
-            showToast('已退出登录');
+            showToast('已清除昵称');
         }
 
         // ========== 邀请功能 ==========
-        
+
         // 生成随机邀请码
         function generateInviteCode() {
             const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
@@ -1590,10 +1788,24 @@
 
         // 创建邀请链接
         async function createInviteLink() {
-            if (!currentUser) {
-                showToast('请先登录');
-                showLoginOverlay();
+            if (!supabaseConfigured) {
+                showToast('请先在"我的"页面配置Supabase');
                 return;
+            }
+
+            if (!currentUser || !currentUser.nickname) {
+                showToast('请先设置昵称');
+                const nickname = prompt('请输入你的昵称：');
+                if (nickname) {
+                    currentUser = {
+                        id: localStorage.getItem('userId') || generateUserId(),
+                        nickname: nickname
+                    };
+                    localStorage.setItem('userId', currentUser.id);
+                    localStorage.setItem('userNickname', nickname);
+                } else {
+                    return;
+                }
             }
 
             if (!currentBook) {
@@ -2062,20 +2274,12 @@
             loadApiKeys();
             initSpeechRecognition();
             loadInputMode();
-            
-            // 检查Supabase认证状态
-            checkAuth();
-            
-            // 监听认证状态变化
-            supabase.auth.onAuthStateChange((event, session) => {
-                if (event === 'SIGNED_IN') {
-                    currentUser = session.user;
-                    hideLoginOverlay();
-                } else if (event === 'SIGNED_OUT') {
-                    currentUser = null;
-                    showLoginOverlay();
-                }
-            });
+
+            // 初始化Supabase
+            initSupabase();
+
+            // 检查用户状态
+            checkUserStatus();
         });
 
         // 页面切换
@@ -2253,6 +2457,9 @@
             // 渲染模型图标栏
             renderModelIcons();
 
+            // 更新导航按钮显示
+            setTimeout(updateNavButtonsVisibility, 500);
+
             // 加载聊天历史
             await loadChatHistory();
         }
@@ -2339,10 +2546,13 @@
         function closeChatView() {
             document.getElementById('chatView').classList.remove('active');
             document.querySelector('.bottom-nav').style.display = 'flex';
+            document.getElementById('navButtons').style.display = 'none';
             switchPage('books');
             currentBook = null;
             pdfDoc = null;
             hidePdfPreview();
+            isCollaborative = false;
+            currentRoom = null;
         }
 
         // 删除书籍
@@ -2543,7 +2753,7 @@
             }
 
             // 添加用户消息（不传screenshots，避免重复显示）
-            addMessageToUI('user', actualMessage, null, requestedPages, null);
+            addMessageToUI('user', actualMessage, null, requestedPages, null, currentUser?.nickname);
             
             // 协作模式保存到云端
             if (isCollaborative && currentUser) {
@@ -2612,16 +2822,31 @@
         }
 
         // 添加消息到界面
-        function addMessageToUI(role, content, model = null, pages = null, screenshots = null) {
+        function addMessageToUI(role, content, model = null, pages = null, screenshots = null, nickname = null) {
             const messages = document.getElementById('chatMessages');
             const div = document.createElement('div');
             div.className = `message ${role}`;
+            if (role === 'user') {
+                div.dataset.isAi = 'false';
+            } else {
+                div.dataset.isAi = 'true';
+            }
 
             // 创建消息包装器
             const wrapper = document.createElement('div');
             wrapper.className = 'message-wrapper';
 
             let html = '';
+
+            // 用户消息显示头像和昵称
+            if (role === 'user' && nickname) {
+                const avatarText = nickname.charAt(0).toUpperCase();
+                html += `<div class="message-header">
+                    <div class="user-avatar user">${avatarText}</div>
+                    <span class="user-nickname">${nickname}</span>
+                </div>`;
+            }
+
             if (role === 'assistant' && model) {
                 html += `<div class="model-tag">${model}</div>`;
             }
@@ -2793,6 +3018,18 @@ ${pageContent}
             }
             updateDefaultModelUI();
 
+            // 加载用户昵称
+            const nickname = localStorage.getItem('userNickname');
+            if (nickname) {
+                document.getElementById('userNickname').value = nickname;
+            }
+
+            // 加载Supabase配置
+            const supabaseUrl = localStorage.getItem('supabaseUrl');
+            const supabaseKey = localStorage.getItem('supabaseKey');
+            if (supabaseUrl) document.getElementById('supabaseUrl').value = supabaseUrl;
+            if (supabaseKey) document.getElementById('supabaseKey').value = supabaseKey;
+
             // 加载大模型API密钥
             ['zhipu', 'deepseek', 'doubao', 'qwen', 'kimi', 'longcat'].forEach(id => {
                 const key = localStorage.getItem(`apiKey_${id}`);
@@ -2801,26 +3038,40 @@ ${pageContent}
                 }
             });
 
-            // 加载百度语音配置
-            const baiduAppId = localStorage.getItem('baiduAppId');
-            const baiduApiKey = localStorage.getItem('baiduApiKey');
-            const baiduSecretKey = localStorage.getItem('baiduSecretKey');
-            if (baiduAppId) document.getElementById('baiduAppId').value = baiduAppId;
-            if (baiduApiKey) document.getElementById('baiduApiKey').value = baiduApiKey;
-            if (baiduSecretKey) document.getElementById('baiduSecretKey').value = baiduSecretKey;
-
-            // 加载讯飞语音配置
-            const xunfeiAppId = localStorage.getItem('xunfeiAppId');
-            const xunfeiApiKey = localStorage.getItem('xunfeiApiKey');
-            if (xunfeiAppId) document.getElementById('xunfeiAppId').value = xunfeiAppId;
-            if (xunfeiApiKey) document.getElementById('xunfeiApiKey').value = xunfeiApiKey;
-
             // 渲染模型图标
             renderModelIcons();
         }
 
         // 保存设置
         function saveSettings() {
+            // 保存用户昵称
+            const nickname = document.getElementById('userNickname').value.trim();
+            if (nickname) {
+                localStorage.setItem('userNickname', nickname);
+                if (currentUser) {
+                    currentUser.nickname = nickname;
+                } else {
+                    currentUser = {
+                        id: localStorage.getItem('userId') || generateUserId(),
+                        nickname: nickname
+                    };
+                    localStorage.setItem('userId', currentUser.id);
+                }
+            } else {
+                localStorage.removeItem('userNickname');
+            }
+
+            // 保存Supabase配置
+            const supabaseUrl = document.getElementById('supabaseUrl').value.trim();
+            const supabaseKey = document.getElementById('supabaseKey').value.trim();
+            if (supabaseUrl) localStorage.setItem('supabaseUrl', supabaseUrl);
+            else localStorage.removeItem('supabaseUrl');
+            if (supabaseKey) localStorage.setItem('supabaseKey', supabaseKey);
+            else localStorage.removeItem('supabaseKey');
+
+            // 重新初始化Supabase
+            initSupabase();
+
             // 保存大模型API密钥
             ['zhipu', 'deepseek', 'doubao', 'qwen', 'kimi', 'longcat'].forEach(id => {
                 const key = document.getElementById(`${id}Key`).value.trim();
@@ -2830,17 +3081,6 @@ ${pageContent}
                     localStorage.removeItem(`apiKey_${id}`);
                 }
             });
-
-            // 保存百度语音配置
-            const baiduAppId = document.getElementById('baiduAppId').value.trim();
-            const baiduApiKey = document.getElementById('baiduApiKey').value.trim();
-            const baiduSecretKey = document.getElementById('baiduSecretKey').value.trim();
-            if (baiduAppId) localStorage.setItem('baiduAppId', baiduAppId);
-            else localStorage.removeItem('baiduAppId');
-            if (baiduApiKey) localStorage.setItem('baiduApiKey', baiduApiKey);
-            else localStorage.removeItem('baiduApiKey');
-            if (baiduSecretKey) localStorage.setItem('baiduSecretKey', baiduSecretKey);
-            else localStorage.removeItem('baiduSecretKey');
 
             // 保存讯飞语音配置
             const xunfeiAppId = document.getElementById('xunfeiAppId').value.trim();
@@ -3320,6 +3560,79 @@ ${pageContent}
             const month = date.getMonth() + 1;
             const day = date.getDate();
             return `${month}月${day}日`;
+        }
+
+        // ========== 导航功能 ==========
+        let currentAIMessageIndex = -1;
+        let aiMessagesList = [];
+
+        // 更新AI消息列表
+        function updateAIMessagesList() {
+            const messages = document.querySelectorAll('.message.assistant');
+            aiMessagesList = Array.from(messages);
+        }
+
+        // 跳转到上一段AI对话
+        function navigateToPrevAI() {
+            updateAIMessagesList();
+            if (aiMessagesList.length === 0) {
+                showToast('没有AI对话');
+                return;
+            }
+
+            if (currentAIMessageIndex <= 0) {
+                currentAIMessageIndex = 0;
+            } else {
+                currentAIMessageIndex--;
+            }
+
+            scrollToMessage(aiMessagesList[currentAIMessageIndex]);
+        }
+
+        // 跳转到下一段AI对话
+        function navigateToNextAI() {
+            updateAIMessagesList();
+            if (aiMessagesList.length === 0) {
+                showToast('没有AI对话');
+                return;
+            }
+
+            if (currentAIMessageIndex >= aiMessagesList.length - 1) {
+                currentAIMessageIndex = aiMessagesList.length - 1;
+            } else {
+                currentAIMessageIndex++;
+            }
+
+            scrollToMessage(aiMessagesList[currentAIMessageIndex]);
+        }
+
+        // 滚动到指定消息
+        function scrollToMessage(element) {
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                // 高亮效果
+                element.style.transition = 'background 0.3s';
+                element.style.background = 'rgba(108, 92, 231, 0.2)';
+                setTimeout(() => {
+                    element.style.background = '';
+                }, 1000);
+            }
+        }
+
+        // 显示/隐藏导航按钮
+        function updateNavButtonsVisibility() {
+            const navButtons = document.getElementById('navButtons');
+            const chatView = document.getElementById('chatView');
+            if (chatView.classList.contains('active')) {
+                updateAIMessagesList();
+                if (aiMessagesList.length > 1) {
+                    navButtons.style.display = 'flex';
+                } else {
+                    navButtons.style.display = 'none';
+                }
+            } else {
+                navButtons.style.display = 'none';
+            }
         }
 
         // 导出聊天记录为Word文档
