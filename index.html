@@ -307,9 +307,12 @@
             display: flex;
             align-items: center;
             padding: 15px;
-            padding-top: calc(15px + env(safe-area-inset-top, 0px));
+            padding-top: calc(20px + env(safe-area-inset-top, 0px));
             background: #1a1a2e;
             gap: 10px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
 
         .back-btn {
@@ -319,13 +322,16 @@
             font-size: 24px;
             cursor: pointer;
             padding: 10px;
-            margin: -10px;
+            margin-left: -5px;
+            margin-right: 5px;
             touch-action: manipulation;
             min-width: 44px;
             min-height: 44px;
             display: flex;
             align-items: center;
             justify-content: center;
+            position: relative;
+            z-index: 10;
         }
 
         .chat-title {
@@ -493,34 +499,34 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.3);
         }
 
-        /* 消息复制按钮 */
-        .message-wrapper {
-            position: relative;
-        }
-
+        /* 消息复制按钮 - 已移到操作栏 */
         .copy-btn {
-            position: absolute;
-            bottom: -8px;
-            left: 8px;
-            background: #333;
-            color: #888;
+            background: none;
             border: none;
-            border-radius: 4px;
-            padding: 4px 8px;
-            font-size: 11px;
+            color: #888;
+            font-size: 13px;
             cursor: pointer;
-            opacity: 0;
-            transition: opacity 0.2s;
+            padding: 4px 8px;
+            border-radius: 4px;
             display: flex;
             align-items: center;
             gap: 4px;
-            z-index: 10;
+            transition: all 0.2s;
         }
 
-        .message-wrapper:hover .copy-btn,
-        .message-wrapper:active .copy-btn {
-            opacity: 1;
+        .copy-btn:hover {
+            background: rgba(108, 92, 231, 0.1);
+            color: #6c5ce7;
         }
+
+        .copy-btn:active {
+            background: rgba(108, 92, 231, 0.2);
+        }
+
+        .copy-btn.copied {
+            color: #4CAF50;
+        }
+
 
         .message-wrapper:last-child .copy-btn {
             opacity: 1;
@@ -534,6 +540,49 @@
         .copy-btn.copied {
             background: #4CAF50;
             color: white;
+        }
+
+        /* 消息操作栏 */
+        .message-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 8px;
+            padding-top: 8px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .message-wrapper:hover .message-actions,
+        .message-wrapper:active .message-actions,
+        .message-wrapper:last-child .message-actions {
+            opacity: 1;
+        }
+
+        .action-btn {
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 13px;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.2s;
+        }
+
+        .action-btn:hover {
+            background: rgba(108, 92, 231, 0.1);
+            color: #6c5ce7;
+        }
+
+        .action-btn:active {
+            background: rgba(108, 92, 231, 0.2);
+        }
+
+        .action-btn.copied {
+            color: #4CAF50;
         }
 
         /* 用户头像 */
@@ -1722,41 +1771,6 @@
             pendingInviteCode = null;
         }
 
-            showToast('正在登录...');
-
-            // 尝试登录
-            const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
-                email,
-                password
-            });
-
-            if (loginData.user) {
-                currentUser = loginData.user;
-                hideLoginOverlay();
-                showToast('登录成功！');
-                checkInviteCode();
-                return;
-            }
-
-            // 如果登录失败，尝试注册
-            const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-                email,
-                password
-            });
-
-            if (signUpError) {
-                showToast('登录失败: ' + (signUpError.message || loginError?.message));
-                return;
-            }
-
-            if (signUpData.user) {
-                currentUser = signUpData.user;
-                hideLoginOverlay();
-                showToast('注册成功！');
-                checkInviteCode();
-            }
-        }
-
         // 跳过登录
         function skipLogin() {
             hideLoginOverlay();
@@ -1788,6 +1802,8 @@
 
         // 创建邀请链接
         async function createInviteLink() {
+            console.log('createInviteLink called');
+            
             if (!supabaseConfigured) {
                 showToast('请先在"我的"页面配置Supabase');
                 return;
@@ -1812,61 +1828,69 @@
                 showToast('请先选择一本书');
                 return;
             }
+            
+            // 显示加载提示
+            showToast('正在生成邀请链接...');
+            
+            try {
+                // 先创建房间
+                const roomData = {
+                    name: currentBook.name,
+                    book_name: currentBook.name,
+                    book_texts: currentBook.texts,
+                    total_pages: totalPages,
+                    owner_id: currentUser.id
+                };
 
-            // 先创建房间
-            const roomData = {
-                name: currentBook.name,
-                book_name: currentBook.name,
-                book_texts: currentBook.texts,
-                total_pages: totalPages,
-                owner_id: currentUser.id
-            };
+                // 检查是否已有房间
+                let roomId = currentRoom?.id;
+                if (!roomId) {
+                    const { data: room, error: roomError } = await supabase
+                        .from('rooms')
+                        .insert([roomData])
+                        .select()
+                        .single();
 
-            // 检查是否已有房间
-            let roomId = currentRoom?.id;
-            if (!roomId) {
-                const { data: room, error: roomError } = await supabase
-                    .from('rooms')
-                    .insert([roomData])
-                    .select()
-                    .single();
+                    if (roomError) {
+                        showToast('创建房间失败: ' + (roomError.message || '未知错误'));
+                        console.error('创建房间失败:', roomError);
+                        return;
+                    }
+                    roomId = room.id;
+                    currentRoom = room;
 
-                if (roomError) {
-                    showToast('创建房间失败');
-                    console.error(roomError);
+                    // 添加创建者为成员
+                    await supabase.from('room_members').insert([{
+                        room_id: roomId,
+                        user_id: currentUser.id,
+                        role: 'owner'
+                    }]);
+                }
+
+                // 创建邀请码
+                const inviteCode = generateInviteCode();
+                const { error: inviteError } = await supabase
+                    .from('invite_codes')
+                    .insert([{
+                        code: inviteCode,
+                        room_id: roomId,
+                        created_by: currentUser.id
+                    }]);
+
+                if (inviteError) {
+                    showToast('创建邀请码失败: ' + (inviteError.message || '未知错误'));
+                    console.error('创建邀请码失败:', inviteError);
                     return;
                 }
-                roomId = room.id;
-                currentRoom = room;
 
-                // 添加创建者为成员
-                await supabase.from('room_members').insert([{
-                    room_id: roomId,
-                    user_id: currentUser.id,
-                    role: 'owner'
-                }]);
+                // 显示邀请链接
+                const inviteLink = `${window.location.origin}${window.location.pathname}?invite=${inviteCode}`;
+                document.getElementById('inviteLink').textContent = inviteLink;
+                document.getElementById('inviteModal').classList.add('show');
+            } catch (error) {
+                console.error('创建邀请链接异常:', error);
+                showToast('创建邀请链接失败: ' + error.message);
             }
-
-            // 创建邀请码
-            const inviteCode = generateInviteCode();
-            const { error: inviteError } = await supabase
-                .from('invite_codes')
-                .insert([{
-                    code: inviteCode,
-                    room_id: roomId,
-                    created_by: currentUser.id
-                }]);
-
-            if (inviteError) {
-                showToast('创建邀请码失败');
-                console.error(inviteError);
-                return;
-            }
-
-            // 显示邀请链接
-            const inviteLink = `${window.location.origin}${window.location.pathname}?invite=${inviteCode}`;
-            document.getElementById('inviteLink').textContent = inviteLink;
-            document.getElementById('inviteModal').classList.add('show');
         }
 
         // 复制邀请链接
@@ -2029,14 +2053,19 @@
             
             wrapper.innerHTML = html;
             
+            // 添加操作栏
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'message-actions';
+            
             const copyBtn = document.createElement('button');
-            copyBtn.className = 'copy-btn';
+            copyBtn.className = 'action-btn';
             copyBtn.innerHTML = '📋 复制';
             copyBtn.onclick = (e) => {
                 e.stopPropagation();
                 copyToClipboard(msg.content, copyBtn);
             };
-            wrapper.appendChild(copyBtn);
+            actionsDiv.appendChild(copyBtn);
+            wrapper.appendChild(actionsDiv);
             
             div.appendChild(wrapper);
             messagesDiv.appendChild(div);
@@ -2610,7 +2639,9 @@
                                 ${pagesHtml}
                                 ${screenshotsHtml}
                                 <div class="message-content">${formatMessage(msg.content)}</div>
-                                <button class="copy-btn" onclick="copyMessageContent(this, \`${escapedContent.replace(/\n/g, '\\n')}\`)">📋 复制</button>
+                                <div class="message-actions">
+                                    <button class="action-btn" onclick="copyMessageContent(this, \`${escapedContent.replace(/\n/g, '\\n')}\`)">📋 复制</button>
+                                </div>
                             </div>
                         </div>
                     `;
@@ -2621,11 +2652,6 @@
             }
             
             scrollToBottom();
-        }
-
-        // 复制消息内容（用于历史消息）
-        function copyMessageContent(btn, content) {
-            copyToClipboard(content, btn);
         }
 
         // 格式化消息
@@ -2714,8 +2740,21 @@
         async function sendMessage() {
             const input = document.getElementById('promptInput');
             const message = input.value.trim();
+            const sendBtn = document.getElementById('sendBtn');
 
-            if (!message) return;
+            console.log('sendMessage called, message:', message);
+            
+            if (!message) {
+                console.log('Message is empty, returning');
+                showToast('请输入消息内容');
+                return;
+            }
+            
+            // 禁用发送按钮，防止重复发送
+            if (sendBtn) {
+                sendBtn.disabled = true;
+                sendBtn.textContent = '发送中...';
+            }
 
             // 模型选择优先级：oneTimeModel > @提及 > 默认模型
             let modelId = defaultModel; // 默认使用默认模型
@@ -2811,7 +2850,14 @@
                 }
             } catch (error) {
                 loadingDiv.remove();
-                addMessageToUI('assistant', `错误: ${error.message}`, models[modelId].name);
+                addMessageToUI('assistant', `错误: ${error.message}`, models[modelId]?.name || '系统');
+                console.error('sendMessage error:', error);
+            } finally {
+                // 重新启用发送按钮
+                if (sendBtn) {
+                    sendBtn.disabled = false;
+                    sendBtn.textContent = '发送';
+                }
             }
 
             // 清除一次性模型，下次回复使用默认模型
@@ -2862,15 +2908,21 @@
 
             wrapper.innerHTML = html;
 
-            // 添加复制按钮
+            // 添加操作栏（只在AI消息或最后一条用户消息显示）
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'message-actions';
+            
+            // 复制按钮
             const copyBtn = document.createElement('button');
-            copyBtn.className = 'copy-btn';
+            copyBtn.className = 'action-btn';
             copyBtn.innerHTML = '📋 复制';
             copyBtn.onclick = (e) => {
                 e.stopPropagation();
                 copyToClipboard(content, copyBtn);
             };
-            wrapper.appendChild(copyBtn);
+            actionsDiv.appendChild(copyBtn);
+            
+            wrapper.appendChild(actionsDiv);
 
             div.appendChild(wrapper);
             messages.appendChild(div);
@@ -2884,13 +2936,13 @@
         function updateCopyButtonVisibility() {
             const wrappers = document.querySelectorAll('.message-wrapper');
             wrappers.forEach((wrapper, index) => {
-                const copyBtn = wrapper.querySelector('.copy-btn');
-                if (copyBtn) {
-                    // 最后一条消息的复制按钮始终显示
+                const actionsDiv = wrapper.querySelector('.message-actions');
+                if (actionsDiv) {
+                    // 最后一条消息的操作栏始终显示
                     if (index === wrappers.length - 1) {
-                        copyBtn.style.opacity = '1';
+                        actionsDiv.style.opacity = '1';
                     } else {
-                        copyBtn.style.opacity = '';
+                        actionsDiv.style.opacity = '';
                     }
                 }
             });
@@ -2909,6 +2961,11 @@
                 console.error('复制失败:', err);
                 showToast('复制失败');
             });
+        }
+
+        // 复制消息内容（用于历史消息）
+        function copyMessageContent(btn, content) {
+            copyToClipboard(content, btn);
         }
 
         // 调用模型API
@@ -3563,59 +3620,83 @@ ${pageContent}
         }
 
         // ========== 导航功能 ==========
-        let currentAIMessageIndex = -1;
-        let aiMessagesList = [];
+        let currentConversationIndex = -1;
+        let conversationPairs = []; // 存储对话对 [{userMsg, aiMsg}]
 
-        // 更新AI消息列表
-        function updateAIMessagesList() {
-            const messages = document.querySelectorAll('.message.assistant');
-            aiMessagesList = Array.from(messages);
+        // 更新对话对列表
+        function updateConversationPairs() {
+            const messages = document.querySelectorAll('.message');
+            conversationPairs = [];
+            
+            let lastUserMsg = null;
+            messages.forEach(msg => {
+                if (msg.classList.contains('user')) {
+                    lastUserMsg = msg;
+                } else if (msg.classList.contains('assistant') && lastUserMsg) {
+                    conversationPairs.push({
+                        userMsg: lastUserMsg,
+                        aiMsg: msg
+                    });
+                    lastUserMsg = null;
+                }
+            });
         }
 
-        // 跳转到上一段AI对话
+        // 跳转到上一段对话
         function navigateToPrevAI() {
-            updateAIMessagesList();
-            if (aiMessagesList.length === 0) {
-                showToast('没有AI对话');
+            updateConversationPairs();
+            if (conversationPairs.length === 0) {
+                showToast('没有对话记录');
                 return;
             }
 
-            if (currentAIMessageIndex <= 0) {
-                currentAIMessageIndex = 0;
+            if (currentConversationIndex <= 0) {
+                currentConversationIndex = 0;
+                showToast('已经是第一段对话');
             } else {
-                currentAIMessageIndex--;
+                currentConversationIndex--;
             }
 
-            scrollToMessage(aiMessagesList[currentAIMessageIndex]);
+            scrollToConversation(conversationPairs[currentConversationIndex]);
         }
 
-        // 跳转到下一段AI对话
+        // 跳转到下一段对话
         function navigateToNextAI() {
-            updateAIMessagesList();
-            if (aiMessagesList.length === 0) {
-                showToast('没有AI对话');
+            updateConversationPairs();
+            if (conversationPairs.length === 0) {
+                showToast('没有对话记录');
                 return;
             }
 
-            if (currentAIMessageIndex >= aiMessagesList.length - 1) {
-                currentAIMessageIndex = aiMessagesList.length - 1;
+            if (currentConversationIndex >= conversationPairs.length - 1) {
+                currentConversationIndex = conversationPairs.length - 1;
+                showToast('已经是最后一段对话');
             } else {
-                currentAIMessageIndex++;
+                currentConversationIndex++;
             }
 
-            scrollToMessage(aiMessagesList[currentAIMessageIndex]);
+            scrollToConversation(conversationPairs[currentConversationIndex]);
         }
 
-        // 滚动到指定消息
-        function scrollToMessage(element) {
-            if (element) {
-                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                // 高亮效果
-                element.style.transition = 'background 0.3s';
-                element.style.background = 'rgba(108, 92, 231, 0.2)';
-                setTimeout(() => {
-                    element.style.background = '';
-                }, 1000);
+        // 滚动到指定对话（显示用户问题+AI回答）
+        function scrollToConversation(pair) {
+            if (pair && pair.userMsg) {
+                // 滚动到用户消息，这样问题和回答都能看到
+                pair.userMsg.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                
+                // 高亮效果 - 同时高亮问题和回答
+                const highlightElement = (el) => {
+                    if (el) {
+                        el.style.transition = 'background 0.3s';
+                        el.style.background = 'rgba(108, 92, 231, 0.15)';
+                        setTimeout(() => {
+                            el.style.background = '';
+                        }, 1200);
+                    }
+                };
+                
+                highlightElement(pair.userMsg);
+                setTimeout(() => highlightElement(pair.aiMsg), 200);
             }
         }
 
@@ -3624,8 +3705,8 @@ ${pageContent}
             const navButtons = document.getElementById('navButtons');
             const chatView = document.getElementById('chatView');
             if (chatView.classList.contains('active')) {
-                updateAIMessagesList();
-                if (aiMessagesList.length > 1) {
+                updateConversationPairs();
+                if (conversationPairs.length > 0) {
                     navButtons.style.display = 'flex';
                 } else {
                     navButtons.style.display = 'none';
