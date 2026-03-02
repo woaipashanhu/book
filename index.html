@@ -1635,12 +1635,16 @@
     <script>
         // ========== Supabase 配置 ==========
         // ========== Supabase 动态配置 ==========
+        console.log('脚本开始加载...');
+        
         let supabase = null;
         let supabaseConfigured = false;
         let currentUser = null;  // 当前用户信息 {id, nickname}
         let currentRoom = null;
         let isCollaborative = false;
         let pendingInviteCode = null;  // 待处理的邀请码
+        
+        console.log('全局变量定义完成');
 
         // 初始化Supabase
         function initSupabase() {
@@ -2295,22 +2299,30 @@
 
         // 初始化
         document.addEventListener('DOMContentLoaded', async () => {
-            await initDB();
-            loadBooks();
-            loadChats();
-            loadApiKeys();
-            initSpeechRecognition();
-            loadInputMode();
+            console.log('DOMContentLoaded 事件触发');
+            try {
+                await initDB();
+                console.log('IndexedDB 初始化完成');
+                loadBooks();
+                loadChats();
+                loadApiKeys();
+                initSpeechRecognition();
+                loadInputMode();
 
-            // 初始化Supabase
-            initSupabase();
+                // 初始化Supabase
+                initSupabase();
 
-            // 检查用户状态
-            checkUserStatus();
+                // 检查用户状态
+                checkUserStatus();
+                console.log('页面初始化完成');
+            } catch (error) {
+                console.error('初始化失败:', error);
+            }
         });
 
         // 页面切换
         function switchPage(page) {
+            console.log('switchPage 被调用，参数:', page);
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             
