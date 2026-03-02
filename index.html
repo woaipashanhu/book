@@ -1637,7 +1637,7 @@
         // ========== Supabase 动态配置 ==========
         console.log('脚本开始加载...');
         
-        let supabase = null;
+        let supabaseClient = null;
         let supabaseConfigured = false;
         let currentUser = null;  // 当前用户信息 {id, nickname}
         let currentRoom = null;
@@ -1653,7 +1653,7 @@
 
             if (url && key) {
                 try {
-                    supabase = window.supabase.createClient(url, key);
+                    supabaseClient = window.supabase.createClient(url, key);
                     supabaseConfigured = true;
                     console.log('Supabase 已配置');
                 } catch (e) {
@@ -1849,7 +1849,7 @@
                 // 检查是否已有房间
                 let roomId = currentRoom?.id;
                 if (!roomId) {
-                    const { data: room, error: roomError } = await supabase
+                    const { data: room, error: roomError } = await supabaseClient
                         .from('rooms')
                         .insert([roomData])
                         .select()
@@ -1864,7 +1864,7 @@
                     currentRoom = room;
 
                     // 添加创建者为成员
-                    await supabase.from('room_members').insert([{
+                    await supabaseClient.from('room_members').insert([{
                         room_id: roomId,
                         user_id: currentUser.id,
                         role: 'owner'
@@ -1873,7 +1873,7 @@
 
                 // 创建邀请码
                 const inviteCode = generateInviteCode();
-                const { error: inviteError } = await supabase
+                const { error: inviteError } = await supabaseClient
                     .from('invite_codes')
                     .insert([{
                         code: inviteCode,
@@ -1918,7 +1918,7 @@
             }
 
             // 查询邀请码
-            const { data: invite, error: inviteError } = await supabase
+            const { data: invite, error: inviteError } = await supabaseClient
                 .from('invite_codes')
                 .select('*, rooms(*)')
                 .eq('code', code)
@@ -1949,7 +1949,7 @@
             }
 
             // 标记邀请码已使用
-            await supabase
+            await supabaseClient
                 .from('invite_codes')
                 .update({ used: true, used_by: currentUser.id })
                 .eq('id', invite.id);
@@ -2079,7 +2079,7 @@
         function subscribeToMessages() {
             if (!currentRoom) return;
 
-            supabase
+            supabaseClient
                 .channel('messages:' + currentRoom.id)
                 .on('postgres_changes', {
                     event: 'INSERT',
@@ -3743,7 +3743,7 @@ ${pageContent}
                 let messages = [];
                 if (isCollaborative && currentRoom) {
                     // 协作模式：从云端获取
-                    const { data, error } = await supabase
+                    const { data, error } = await supabaseClient
                         .from('messages')
                         .select('*')
                         .eq('room_id', currentRoom.id)
