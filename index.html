@@ -1455,7 +1455,7 @@
                         </div>
                         <div class="api-key-item">
                             <label>Supabase Anon Key</label>
-                            <input type="password" id="supabaseKey" placeholder="eyJhbGciOiJIUzI1...">
+                            <input type="password" id="supabaseKey" placeholder="eyJhbGciOiJIUzI1..." autocomplete="new-password">
                             <div style="font-size:11px;color:#888;margin-top:8px;">不配置则无法使用邀请协作功能</div>
                         </div>
                     </div>
@@ -1467,14 +1467,14 @@
                                 <label>智谱AI (GLM-4)</label>
                                 <button class="default-btn" onclick="setDefaultModel('zhipu')">⭐</button>
                             </div>
-                            <input type="password" id="zhipuKey" placeholder="请输入API密钥">
+                            <input type="password" id="zhipuKey" placeholder="请输入API密钥" autocomplete="new-password">
                         </div>
                         <div class="api-key-item" id="deepseekKeyItem">
                             <div class="api-key-header">
                                 <label>DeepSeek</label>
                                 <button class="default-btn" onclick="setDefaultModel('deepseek')">⭐</button>
                             </div>
-                            <input type="password" id="deepseekKey" placeholder="请输入API密钥">
+                            <input type="password" id="deepseekKey" placeholder="请输入API密钥" autocomplete="new-password">
                         </div>
                         <div class="api-key-item" id="doubaoKeyItem">
                             <div class="api-key-header">
@@ -1488,7 +1488,7 @@
                                 <label>通义千问</label>
                                 <button class="default-btn" onclick="setDefaultModel('qwen')">⭐</button>
                             </div>
-                            <input type="password" id="qwenKey" placeholder="请输入API密钥">
+                            <input type="password" id="qwenKey" placeholder="请输入API密钥" autocomplete="new-password">
                         </div>
                         <div class="api-key-item" id="kimiKeyItem">
                             <div class="api-key-header">
@@ -1502,7 +1502,7 @@
                                 <label>美团LongCat</label>
                                 <button class="default-btn" onclick="setDefaultModel('longcat')">⭐</button>
                             </div>
-                            <input type="password" id="longcatKey" placeholder="请输入API密钥">
+                            <input type="password" id="longcatKey" placeholder="请输入API密钥" autocomplete="new-password">
                         </div>
                     </div>
 
@@ -2756,67 +2756,67 @@
                 sendBtn.textContent = '发送中...';
             }
 
-            // 模型选择优先级：oneTimeModel > @提及 > 默认模型
-            let modelId = defaultModel; // 默认使用默认模型
-            let actualMessage = message;
+            try {
+                // 模型选择优先级：oneTimeModel > @提及 > 默认模型
+                let modelId = defaultModel; // 默认使用默认模型
+                let actualMessage = message;
 
-            // 1. 检查是否有一次性模型（点击图标选择的）
-            if (oneTimeModel) {
-                modelId = oneTimeModel;
-            }
+                // 1. 检查是否有一次性模型（点击图标选择的）
+                if (oneTimeModel) {
+                    modelId = oneTimeModel;
+                }
 
-            // 2. 检查是否有 @ 提及（优先级最高）
-            const atMatch = message.match(/@([^\s]+)\s*(.*)/);
-            if (atMatch) {
-                const modelName = atMatch[1];
-                for (const [id, config] of Object.entries(models)) {
-                    if (modelName.includes(config.name) || config.name.includes(modelName)) {
-                        modelId = id;
-                        actualMessage = atMatch[2];
-                        break;
+                // 2. 检查是否有 @ 提及（优先级最高）
+                const atMatch = message.match(/@([^\s]+)\s*(.*)/);
+                if (atMatch) {
+                    const modelName = atMatch[1];
+                    for (const [id, config] of Object.entries(models)) {
+                        if (modelName.includes(config.name) || config.name.includes(modelName)) {
+                            modelId = id;
+                            actualMessage = atMatch[2];
+                            break;
+                        }
                     }
                 }
-            }
 
-            // 解析页码
-            const requestedPages = parsePages(message);
+                // 解析页码
+                const requestedPages = parsePages(message);
 
-            // 生成页面截图
-            let screenshots = [];
-            if (requestedPages.length > 0) {
-                for (const pageNum of requestedPages) {
-                    const canvas = await renderPageToCanvas(pageNum, 0.5);
-                    screenshots.push(canvas.toDataURL('image/jpeg', 0.7));
+                // 生成页面截图
+                let screenshots = [];
+                if (requestedPages.length > 0) {
+                    for (const pageNum of requestedPages) {
+                        const canvas = await renderPageToCanvas(pageNum, 0.5);
+                        screenshots.push(canvas.toDataURL('image/jpeg', 0.7));
+                    }
+                    showPdfPreview(requestedPages);
                 }
-                showPdfPreview(requestedPages);
-            }
 
-            // 添加用户消息（不传screenshots，避免重复显示）
-            addMessageToUI('user', actualMessage, null, requestedPages, null, currentUser?.nickname);
-            
-            // 协作模式保存到云端
-            if (isCollaborative && currentUser) {
-                await saveMessageToCloud('user', actualMessage, null, requestedPages);
-            } else {
-                await saveChatMessage('user', actualMessage, null, requestedPages, screenshots);
-            }
+                // 添加用户消息（不传screenshots，避免重复显示）
+                addMessageToUI('user', actualMessage, null, requestedPages, null, currentUser?.nickname);
+                
+                // 协作模式保存到云端
+                if (isCollaborative && currentUser) {
+                    await saveMessageToCloud('user', actualMessage, null, requestedPages);
+                } else {
+                    await saveChatMessage('user', actualMessage, null, requestedPages, screenshots);
+                }
 
-            input.value = '';
-            input.style.height = 'auto';
+                input.value = '';
+                input.style.height = 'auto';
 
-            // 显示加载状态
-            const loadingDiv = document.createElement('div');
-            loadingDiv.className = 'message assistant';
-            loadingDiv.innerHTML = `
-                <div class="model-tag">${models[modelId].name}</div>
-                <div class="message-loading">
-                    <span></span><span></span><span></span>
-                </div>
-            `;
-            document.getElementById('chatMessages').appendChild(loadingDiv);
-            scrollToBottom();
+                // 显示加载状态
+                const loadingDiv = document.createElement('div');
+                loadingDiv.className = 'message assistant';
+                loadingDiv.innerHTML = `
+                    <div class="model-tag">${models[modelId].name}</div>
+                    <div class="message-loading">
+                        <span></span><span></span><span></span>
+                    </div>
+                `;
+                document.getElementById('chatMessages').appendChild(loadingDiv);
+                scrollToBottom();
 
-            try {
                 // 获取页面文本
                 let pageContent = '';
                 let pagesToUse = requestedPages.length > 0 ? requestedPages : [currentPage];
@@ -2848,10 +2848,17 @@
                 } else {
                     await saveChatMessage('assistant', response, models[modelId].name);
                 }
+
+                // 清除一次性模型，下次回复使用默认模型
+                oneTimeModel = null;
+                renderModelIcons();
+
+                loadChats();
             } catch (error) {
-                loadingDiv.remove();
-                addMessageToUI('assistant', `错误: ${error.message}`, models[modelId]?.name || '系统');
                 console.error('sendMessage error:', error);
+                showToast('发送失败: ' + error.message);
+                // 添加错误消息到界面
+                addMessageToUI('assistant', `错误: ${error.message}`, '系统');
             } finally {
                 // 重新启用发送按钮
                 if (sendBtn) {
@@ -2859,12 +2866,6 @@
                     sendBtn.textContent = '发送';
                 }
             }
-
-            // 清除一次性模型，下次回复使用默认模型
-            oneTimeModel = null;
-            renderModelIcons();
-
-            loadChats();
         }
 
         // 添加消息到界面
