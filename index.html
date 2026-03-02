@@ -14,6 +14,10 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- docx.js for Word export -->
     <script src="https://cdn.jsdelivr.net/npm/docx@8.2.2/build/index.umd.min.js"></script>
+    <!-- mammoth.js for Word file parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+    <!-- Tesseract.js for OCR -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -141,6 +145,49 @@
             font-size: 12px;
             color: #888;
             margin-top: 8px;
+        }
+
+        /* 双按钮上传区域 */
+        .upload-buttons {
+            display: flex;
+            gap: 15px;
+            margin: 20px;
+        }
+
+        .upload-btn-item {
+            flex: 1;
+            border: 2px dashed #444;
+            border-radius: 16px;
+            padding: 25px 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .upload-btn-item:hover {
+            border-color: #6c5ce7;
+            background: rgba(108, 92, 231, 0.1);
+        }
+
+        .upload-btn-item input {
+            display: none;
+        }
+
+        .upload-btn-icon {
+            font-size: 36px;
+            margin-bottom: 8px;
+        }
+
+        .upload-btn-text {
+            font-size: 14px;
+            color: #e0e0e0;
+            font-weight: 500;
+        }
+
+        .upload-btn-hint {
+            font-size: 11px;
+            color: #888;
+            margin-top: 5px;
         }
 
         /* 书籍列表 */
@@ -494,9 +541,55 @@
         }
 
         .message-page-img {
-            width: 80px;
+            width: 120px;
             border-radius: 6px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .message-page-img:hover {
+            transform: scale(1.05);
+        }
+
+        /* 图片放大查看 */
+        .image-lightbox {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            padding: 20px;
+        }
+
+        .image-lightbox.show {
+            display: flex;
+        }
+
+        .image-lightbox img {
+            max-width: 95%;
+            max-height: 95%;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+
+        .image-lightbox-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
         }
 
         /* 消息复制按钮 - 已移到操作栏 */
@@ -1402,11 +1495,19 @@
                 <h1>📚 书籍</h1>
             </div>
             <div class="page-content">
-                <div class="upload-area" onclick="document.getElementById('fileInput').click()">
-                    <input type="file" id="fileInput" accept=".pdf" onchange="handleFileUpload(event)">
-                    <div class="upload-icon">📁</div>
-                    <div class="upload-text">点击上传PDF文件</div>
-                    <div class="upload-hint">文件保存在本地，不会上传到服务器</div>
+                <div class="upload-buttons">
+                    <div class="upload-btn-item" onclick="document.getElementById('fileInput').click()">
+                        <input type="file" id="fileInput" accept=".pdf,.docx,.doc" onchange="handleFileUpload(event)">
+                        <div class="upload-btn-icon">📄</div>
+                        <div class="upload-btn-text">文件</div>
+                        <div class="upload-btn-hint">PDF / Word</div>
+                    </div>
+                    <div class="upload-btn-item" onclick="document.getElementById('imageInput').click()">
+                        <input type="file" id="imageInput" accept="image/*" onchange="handleImageUpload(event)">
+                        <div class="upload-btn-icon">🖼️</div>
+                        <div class="upload-btn-text">图片</div>
+                        <div class="upload-btn-hint">相册 / 拍照</div>
+                    </div>
                 </div>
                 <div class="books-list">
                     <div class="books-list-title">我的书籍</div>
@@ -1632,6 +1733,12 @@
     <!-- Toast -->
     <div class="toast" id="toast"></div>
 
+    <!-- 图片放大查看 -->
+    <div class="image-lightbox" id="imageLightbox" onclick="closeImageLightbox()">
+        <button class="image-lightbox-close">×</button>
+        <img id="lightboxImg" src="" alt="放大图片">
+    </div>
+
     <script>
         // ========== Supabase 配置 ==========
         // ========== Supabase 动态配置 ==========
@@ -1838,12 +1945,18 @@
             
             try {
                 // 先创建房间
+                // 获取当前默认模型的API配置
+                const currentApiProvider = defaultModel;
+                const currentApiKey = localStorage.getItem(`apiKey_${defaultModel}`);
+
                 const roomData = {
                     name: currentBook.name,
                     book_name: currentBook.name,
                     book_texts: currentBook.texts,
                     total_pages: totalPages,
-                    owner_id: currentUser.id
+                    owner_id: currentUser.id,
+                    api_provider: currentApiProvider,
+                    api_key: currentApiKey
                 };
 
                 // 检查是否已有房间
@@ -1957,7 +2070,16 @@
             // 设置当前房间
             currentRoom = invite.rooms;
             isCollaborative = true;
-            
+
+            // 如果房间有API配置，临时使用房间的API（不保存到本地）
+            if (currentRoom.api_provider && currentRoom.api_key) {
+                // 标记使用协作房间的API
+                window.collaborativeApiConfig = {
+                    provider: currentRoom.api_provider,
+                    key: currentRoom.api_key
+                };
+            }
+
             showToast('已加入协作房间！');
             
             // 创建虚拟书籍并加载
@@ -2406,43 +2528,175 @@
             const file = event.target.files[0];
             if (!file) return;
 
-            showToast('正在加载PDF...');
+            const fileExt = file.name.split('.').pop().toLowerCase();
             
             try {
-                const arrayBuffer = await file.arrayBuffer();
-                const base64Data = arrayBufferToBase64(arrayBuffer);
-                const pdfBuffer = base64ToArrayBuffer(base64Data);
-                const pdf = await pdfjsLib.getDocument({ data: pdfBuffer }).promise;
+                let bookData;
                 
-                // 提取所有页面文本
-                const texts = {};
-                for (let i = 1; i <= pdf.numPages; i++) {
-                    const page = await pdf.getPage(i);
-                    const textContent = await page.getTextContent();
-                    texts[i] = textContent.items.map(item => item.str).join(' ');
+                if (fileExt === 'pdf') {
+                    showToast('正在加载PDF...');
+                    bookData = await processPdfFile(file);
+                } else if (fileExt === 'docx' || fileExt === 'doc') {
+                    showToast('正在加载Word文档...');
+                    bookData = await processWordFile(file);
+                } else {
+                    showToast('不支持的文件格式');
+                    return;
                 }
-
-                const bookData = {
-                    id: Date.now().toString(),
-                    name: file.name.replace('.pdf', ''),
-                    data: base64Data,
-                    pages: pdf.numPages,
-                    texts: texts,
-                    date: new Date().toISOString()
-                };
                 
                 await saveBookToDB(bookData);
-                
                 event.target.value = '';
-                showToast('PDF加载成功！');
+                showToast('文件加载成功！');
                 loadBooks();
-                
-                // 直接打开
                 openBook(bookData.id);
             } catch (error) {
-                console.error('Error loading PDF:', error);
-                showToast('PDF加载失败: ' + error.message);
+                console.error('Error loading file:', error);
+                showToast('文件加载失败: ' + error.message);
             }
+        }
+
+        // 处理PDF文件
+        async function processPdfFile(file) {
+            const arrayBuffer = await file.arrayBuffer();
+            const base64Data = arrayBufferToBase64(arrayBuffer);
+            const pdfBuffer = base64ToArrayBuffer(base64Data);
+            const pdf = await pdfjsLib.getDocument({ data: pdfBuffer }).promise;
+            
+            // 提取所有页面文本
+            const texts = {};
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                texts[i] = textContent.items.map(item => item.str).join(' ');
+            }
+
+            return {
+                id: Date.now().toString(),
+                name: file.name.replace('.pdf', ''),
+                type: 'pdf',
+                data: base64Data,
+                pages: pdf.numPages,
+                texts: texts,
+                date: new Date().toISOString()
+            };
+        }
+
+        // 处理Word文件
+        async function processWordFile(file) {
+            const arrayBuffer = await file.arrayBuffer();
+            const base64Data = arrayBufferToBase64(arrayBuffer);
+            
+            // 使用mammoth提取文本
+            const result = await mammoth.extractRawText({ arrayBuffer: arrayBuffer });
+            const text = result.value;
+            
+            // 按段落分页（每1000字符一页）
+            const texts = {};
+            const paragraphs = text.split(/\n\n+/);
+            let currentPage = 1;
+            let currentText = '';
+            
+            paragraphs.forEach(para => {
+                currentText += para + '\n\n';
+                if (currentText.length >= 1000) {
+                    texts[currentPage] = currentText.trim();
+                    currentPage++;
+                    currentText = '';
+                }
+            });
+            
+            if (currentText.trim()) {
+                texts[currentPage] = currentText.trim();
+            }
+
+            return {
+                id: Date.now().toString(),
+                name: file.name.replace(/\.(docx|doc)$/i, ''),
+                type: 'word',
+                data: base64Data,
+                pages: Object.keys(texts).length,
+                texts: texts,
+                date: new Date().toISOString()
+            };
+        }
+
+        // 处理图片上传
+        async function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            showToast('正在识别图片文字...');
+            
+            try {
+                const bookData = await processImageFile(file);
+                await saveBookToDB(bookData);
+                event.target.value = '';
+                showToast('图片识别成功！');
+                loadBooks();
+                openBook(bookData.id);
+            } catch (error) {
+                console.error('Error processing image:', error);
+                showToast('图片处理失败: ' + error.message);
+            }
+        }
+
+        // 处理图片文件（OCR提取文字）
+        async function processImageFile(file) {
+            // 将图片转为 base64
+            const base64Data = await new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.readAsDataURL(file);
+            });
+
+            // 使用 Tesseract.js 进行 OCR
+            const result = await Tesseract.recognize(
+                'data:image/' + file.type.split('/')[1] + ';base64,' + base64Data,
+                'chi_sim+eng',  // 支持中英文
+                {
+                    logger: m => {
+                        if (m.status === 'recognizing text') {
+                            console.log('OCR进度:', Math.round(m.progress * 100) + '%');
+                        }
+                    }
+                }
+            );
+
+            const text = result.data.text;
+            
+            // 如果识别出的文字太少，可能是图片问题
+            if (text.trim().length < 10) {
+                throw new Error('未能识别出足够文字，请尝试更清晰的图片');
+            }
+
+            // 按段落分页
+            const texts = {};
+            const paragraphs = text.split(/\n\n+/);
+            let currentPage = 1;
+            let currentText = '';
+            
+            paragraphs.forEach(para => {
+                currentText += para + '\n\n';
+                if (currentText.length >= 800) {
+                    texts[currentPage] = currentText.trim();
+                    currentPage++;
+                    currentText = '';
+                }
+            });
+            
+            if (currentText.trim()) {
+                texts[currentPage] = currentText.trim();
+            }
+
+            return {
+                id: Date.now().toString(),
+                name: file.name.replace(/\.(jpg|jpeg|png|gif|webp)$/i, ''),
+                type: 'image',
+                data: base64Data,
+                pages: Object.keys(texts).length,
+                texts: texts,
+                date: new Date().toISOString()
+            };
         }
 
         // ArrayBuffer转Base64
@@ -2792,12 +3046,12 @@
                 // 解析页码
                 const requestedPages = parsePages(message);
 
-                // 生成页面截图
+                // 生成页面截图（高分辨率）
                 let screenshots = [];
                 if (requestedPages.length > 0) {
                     for (const pageNum of requestedPages) {
-                        const canvas = await renderPageToCanvas(pageNum, 0.5);
-                        screenshots.push(canvas.toDataURL('image/jpeg', 0.7));
+                        const canvas = await renderPageToCanvas(pageNum, 1.5);
+                        screenshots.push(canvas.toDataURL('image/jpeg', 0.9));
                     }
                     showPdfPreview(requestedPages);
                 }
@@ -2912,7 +3166,7 @@
             }
             if (screenshots && screenshots.length > 0) {
                 html += `<div class="message-pages">
-                    ${screenshots.map(s => `<img src="${s}" class="message-page-img">`).join('')}
+                    ${screenshots.map(s => `<img src="${s}" class="message-page-img" onclick="openImageLightbox(this.src)">`).join('')}
                 </div>`;
             }
             html += `<div class="message-content">${formatMessage(content)}</div>`;
@@ -2981,12 +3235,23 @@
 
         // 调用模型API
         async function callModelAPI(modelId, prompt, pageContent, pagesToUse) {
-            const apiKey = localStorage.getItem(`apiKey_${modelId}`);
-            if (!apiKey) {
-                throw new Error(`请先在"我的"页面配置${models[modelId].name}的API密钥`);
+            let apiKey;
+            let actualModelId = modelId;
+
+            // 协作模式：优先使用房间的API配置
+            if (isCollaborative && window.collaborativeApiConfig) {
+                actualModelId = window.collaborativeApiConfig.provider;
+                apiKey = window.collaborativeApiConfig.key;
+            } else {
+                // 本地模式：使用本地配置
+                apiKey = localStorage.getItem(`apiKey_${modelId}`);
             }
-            
-            const config = models[modelId];
+
+            if (!apiKey) {
+                throw new Error(`请先在"我的"页面配置${models[actualModelId].name}的API密钥`);
+            }
+
+            const config = models[actualModelId];
             const chat = await getChatByBookId(currentBook.id);
             
             // 构建消息历史
@@ -3017,7 +3282,7 @@ ${pageContent}
             
             messages.push({ role: 'user', content: prompt });
             
-            if (modelId === 'qwen') {
+            if (actualModelId === 'qwen') {
                 return await callQwenAPI(apiKey, messages);
             } else {
                 return await callOpenAICompatibleAPI(config.endpoint, apiKey, config.model, messages);
@@ -3612,6 +3877,19 @@ ${pageContent}
         }
 
         // Toast提示
+        // 图片放大查看
+        function openImageLightbox(src) {
+            const lightbox = document.getElementById('imageLightbox');
+            const img = document.getElementById('lightboxImg');
+            img.src = src;
+            lightbox.classList.add('show');
+        }
+
+        function closeImageLightbox() {
+            const lightbox = document.getElementById('imageLightbox');
+            lightbox.classList.remove('show');
+        }
+
         function showToast(message) {
             const toast = document.getElementById('toast');
             toast.textContent = message;
