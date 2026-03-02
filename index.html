@@ -1467,10 +1467,10 @@
     <!-- 被邀请人输入昵称界面 -->
     <div class="login-overlay hidden" id="inviteJoinOverlay">
         <div class="login-box">
-            <h2>加入协作房间</h2>
+            <h2>加入协作对话</h2>
             <p style="color:#888;font-size:13px;margin-bottom:15px;">请输入你的昵称</p>
             <input type="text" id="joinNicknameInput" placeholder="输入昵称（如：L）" maxlength="10">
-            <button onclick="handleJoinWithNickname()">加入房间</button>
+            <button onclick="handleJoinWithNickname()">加入对话</button>
             <div class="skip-login">
                 <a onclick="cancelJoin()">取消</a>
             </div>
@@ -1969,8 +1969,8 @@
                         .single();
 
                     if (roomError) {
-                        showToast('创建房间失败: ' + (roomError.message || '未知错误'));
-                        console.error('创建房间失败:', roomError);
+                        showToast('创建对话失败: ' + (roomError.message || '未知错误'));
+                        console.error('创建对话失败:', roomError);
                         return;
                     }
                     roomId = room.id;
@@ -2057,7 +2057,7 @@
                 }]);
 
             if (memberError) {
-                showToast('加入房间失败');
+                showToast('加入对话失败');
                 return false;
             }
 
@@ -2080,7 +2080,7 @@
                 };
             }
 
-            showToast('已加入协作房间！');
+            showToast('已加入协作对话！');
             
             // 创建虚拟书籍并加载
             await loadCollaborativeRoom();
@@ -2140,7 +2140,7 @@
                     <div class="message assistant">
                         <div class="message-wrapper">
                             <div class="message-content">
-                                👋 欢迎加入协作房间！<br><br>
+                                👋 欢迎加入协作对话！<br><br>
                                 所有成员都能看到聊天记录，都可以提问。
                             </div>
                         </div>
