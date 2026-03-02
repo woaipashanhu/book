@@ -2103,7 +2103,7 @@
                 .from('messages')
                 .insert([{
                     room_id: currentRoom.id,
-                    user_id: currentUser.id,
+                    user_id: currentUser?.id || 'anonymous',
                     role: role,
                     content: content,
                     model: model,
