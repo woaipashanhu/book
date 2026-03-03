@@ -2288,10 +2288,17 @@
         }
 
         // 订阅实时消息
+        let messageChannel = null;  // 保存订阅通道
+        
         function subscribeToMessages() {
             if (!currentRoom) return;
+            
+            // 先取消之前的订阅，避免重复订阅
+            if (messageChannel) {
+                messageChannel.unsubscribe();
+            }
 
-            supabaseClient
+            messageChannel = supabaseClient
                 .channel('messages:' + currentRoom.id)
                 .on('postgres_changes', {
                     event: 'INSERT',
