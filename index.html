@@ -229,21 +229,45 @@
         .book-item {
             background: var(--bg-secondary);
             border-radius: 12px;
-            padding: 15px;
             margin-bottom: 12px;
+            position: relative;
+            overflow: hidden;
+            touch-action: pan-y;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .book-item-content {
             display: flex;
             align-items: center;
             gap: 15px;
+            padding: 15px;
+            background: var(--bg-secondary);
+            transition: transform 0.3s ease;
             cursor: pointer;
-            transition: all 0.2s ease;
-            position: relative;
-            touch-action: manipulation;
-            -webkit-tap-highlight-color: var(--accent-light);
         }
 
-        .book-item:active {
+        .book-item-content:active {
             transform: scale(0.98);
             background: var(--bg-tertiary);
+        }
+
+        .book-item.swiped .book-item-content {
+            transform: translateX(-80px);
+        }
+
+        .book-item-delete {
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 80px;
+            background: var(--danger);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
         }
 
         .book-item.expired {
@@ -286,34 +310,6 @@
         .book-item .book-meta {
             font-size: 13px;
             color: var(--text-secondary);
-        }
-
-        .book-item .delete-btn {
-            position: absolute;
-            top: 5px;
-            right: 5px;
-            background: var(--danger);
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 28px;
-            height: 28px;
-            font-size: 14px;
-            cursor: pointer;
-            opacity: 0;
-            transition: opacity 0.3s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            touch-action: manipulation;
-            min-width: 44px;
-            min-height: 44px;
-            padding: 8px;
-        }
-
-        .book-item:active .delete-btn,
-        .book-item:hover .delete-btn {
-            opacity: 1;
         }
 
         /* 对话页面 */
@@ -996,6 +992,45 @@
             background: var(--bg-secondary);
             border-top: 0.5px solid var(--border);
             position: relative;
+        }
+
+        /* 功能按钮组 - 连在一起的圆圈 */
+        .action-btns-group {
+            display: flex;
+            align-items: center;
+            background: var(--bg-tertiary);
+            border-radius: 22px;
+            padding: 4px;
+            gap: 2px;
+            flex-shrink: 0;
+        }
+
+        .action-circle-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: transparent;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            color: #888;
+        }
+
+        .action-circle-btn:hover {
+            background: rgba(108, 92, 231, 0.2);
+        }
+
+        .action-circle-btn.active {
+            background: #6c5ce7;
+            color: white;
+        }
+
+        .action-circle-btn:active {
+            transform: scale(0.95);
         }
 
         /* 导出按钮 */
@@ -1882,12 +1917,12 @@
                     </div>
                     <button id="sendBtn" onclick="sendMessage()">发送</button>
                 </div>
-                <!-- 模式切换按钮 -->
-                <button class="mode-switch-btn" id="modeSwitchBtn" onclick="toggleInputMode()">
-                    <span id="modeSwitchIcon">⌨️</span>
-                </button>
-                <!-- 导出按钮 -->
-                <button class="export-btn" onclick="exportChatToWord()" title="导出聊天记录">📄</button>
+                <!-- 功能按钮组 -->
+                <div class="action-btns-group">
+                    <button class="action-circle-btn active" id="voiceBtn" onclick="switchToVoiceMode()" title="语音输入">🎤</button>
+                    <button class="action-circle-btn" id="textBtn" onclick="switchToTextMode()" title="文字输入">⌨️</button>
+                    <button class="action-circle-btn" onclick="exportChatToWord()" title="导出Word">📄</button>
+                </div>
             </div>
             <!-- 语音提示浮层 -->
             <div class="voice-toast" id="voiceToast">
@@ -1943,6 +1978,7 @@
         let pendingInviteCode = null;  // 待处理的邀请码
         let pendingSupabaseConfig = null;  // 待处理的Supabase配置（从URL获取）
         let invitedChats = [];  // 被邀请的对话列表
+        let roomMembers = new Set();  // 房间成员昵称缓存
         
         console.log('全局变量定义完成');
 
@@ -2256,6 +2292,10 @@
                 // 订阅实时消息
                 subscribeToMessages();
 
+                // 更新模型图标显示
+                renderModelIcons();
+                updateNavButtonsVisibility();
+
                 console.log('已进入协作模式，消息将同步到云端', { currentRoom: currentRoom?.id, isCollaborative });
             } catch (error) {
                 console.error('创建邀请链接异常:', error);
@@ -2371,6 +2411,9 @@
             document.getElementById('chatView').classList.add('active');
             document.querySelector('.bottom-nav').style.display = 'none';
 
+            // 渲染模型图标栏
+            renderModelIcons();
+
             // 加载云端消息
             await loadCloudMessages();
 
@@ -2466,12 +2509,22 @@
                 return;
             }
 
+            // 提取所有成员昵称
+            roomMembers.clear();
+            messages.forEach(msg => {
+                if (msg.role === 'user' && msg.nickname) {
+                    roomMembers.add(msg.nickname);
+                }
+            });
+
             messages.forEach(msg => {
                 addCloudMessageToUI(msg);
             });
 
-            updateCopyButtonVisibility();
             scrollToBottom();
+            
+            // 更新成员头像栏
+            renderMembersBar();
         }
 
         // 添加云端消息到UI
@@ -2505,19 +2558,21 @@
             
             wrapper.innerHTML = html;
             
-            // 添加操作栏
-            const actionsDiv = document.createElement('div');
-            actionsDiv.className = 'message-actions';
-            
-            const copyBtn = document.createElement('button');
-            copyBtn.className = 'action-btn';
-            copyBtn.innerHTML = '📋 复制';
-            copyBtn.onclick = (e) => {
-                e.stopPropagation();
-                copyToClipboard(msg.content, copyBtn);
-            };
-            actionsDiv.appendChild(copyBtn);
-            wrapper.appendChild(actionsDiv);
+            // 添加长按复制功能
+            let longPressTimer = null;
+            wrapper.addEventListener('touchstart', (e) => {
+                longPressTimer = setTimeout(() => {
+                    navigator.clipboard.writeText(msg.content).then(() => {
+                        showToast('已复制');
+                    });
+                }, 500);
+            });
+            wrapper.addEventListener('touchend', () => {
+                if (longPressTimer) clearTimeout(longPressTimer);
+            });
+            wrapper.addEventListener('touchmove', () => {
+                if (longPressTimer) clearTimeout(longPressTimer);
+            });
             
             div.appendChild(wrapper);
             messagesDiv.appendChild(div);
@@ -2547,7 +2602,6 @@
                     const existing = document.querySelector(`[data-message-id="${msg.id}"]`);
                     if (!existing) {
                         addCloudMessageToUI(msg);
-                        updateCopyButtonVisibility();
                         scrollToBottom();
                     }
                 })
@@ -2837,7 +2891,14 @@
             const books = await getAllBooks();
             const list = document.getElementById('booksList');
 
-            if (books.length === 0) {
+            // 获取被邀请对话的书籍ID，用于过滤重复
+            const invitedChats = loadInvitedChats();
+            const invitedBookIds = new Set(invitedChats.filter(c => c.bookId).map(c => c.bookId));
+
+            // 过滤掉已经被邀请的对话（避免重复显示）
+            const filteredBooks = books.filter(book => !invitedBookIds.has(book.id));
+
+            if (filteredBooks.length === 0) {
                 list.innerHTML = `
                     <div class="empty-state">
                         <div class="icon">📖</div>
@@ -2847,16 +2908,21 @@
                 return;
             }
 
-            list.innerHTML = books.map(book => `
-                <div class="book-item" onclick="openBook('${book.id}')">
-                    <button class="delete-btn" onclick="deleteBook(event, '${book.id}')">×</button>
-                    <div class="book-icon">📄</div>
-                    <div class="book-info">
-                        <div class="book-name">${book.name}</div>
-                        <div class="book-meta">${book.pages}页 · ${formatDate(book.date)}</div>
+            list.innerHTML = filteredBooks.map(book => `
+                <div class="book-item" data-book-id="${book.id}">
+                    <div class="book-item-content" onclick="openBook('${book.id}')">
+                        <div class="book-icon">📄</div>
+                        <div class="book-info">
+                            <div class="book-name">${book.name}</div>
+                            <div class="book-meta">${book.pages}页 · ${formatDate(book.date)}</div>
+                        </div>
                     </div>
+                    <div class="book-item-delete" onclick="deleteBook(event, '${book.id}')">删除</div>
                 </div>
             `).join('');
+
+            // 添加左滑删除事件
+            initSwipeToDelete();
         }
 
         // 加载被邀请对话的UI
@@ -2884,15 +2950,20 @@
             }
 
             list.innerHTML = validChats.map(chat => `
-                <div class="book-item ${chat.valid ? '' : 'expired'}" onclick="${chat.valid ? `enterInvitedChat('${chat.roomId}')` : ''}">
-                    <button class="delete-btn" onclick="removeInvitedChatUI(event, '${chat.roomId}')">×</button>
-                    <div class="book-icon">📄</div>
-                    <div class="book-info">
-                        <div class="book-name">${chat.roomName}<span class="inviter-tag">${chat.isOwner ? '我创建' : '被邀请'}</span></div>
-                        <div class="book-meta">${chat.valid ? '点击进入' : '房间已失效'}</div>
+                <div class="book-item ${chat.valid ? '' : 'expired'}" data-room-id="${chat.roomId}">
+                    <div class="book-item-content" onclick="${chat.valid ? `enterInvitedChat('${chat.roomId}')` : ''}">
+                        <div class="book-icon">📄</div>
+                        <div class="book-info">
+                            <div class="book-name">${chat.roomName}<span class="inviter-tag">${chat.isOwner ? '我创建' : '被邀请'}</span></div>
+                            <div class="book-meta">${chat.valid ? '点击进入' : '房间已失效'}</div>
+                        </div>
                     </div>
+                    <div class="book-item-delete" onclick="removeInvitedChatUI(event, '${chat.roomId}')">删除</div>
                 </div>
             `).join('');
+
+            // 添加左滑删除事件
+            initSwipeToDelete();
         }
 
         // 检查房间是否有效
@@ -3370,6 +3441,46 @@
             }
         }
 
+        // 初始化左滑删除功能
+        function initSwipeToDelete() {
+            const items = document.querySelectorAll('.book-item');
+            let startX = 0;
+            let currentX = 0;
+            let currentItem = null;
+
+            items.forEach(item => {
+                item.addEventListener('touchstart', (e) => {
+                    startX = e.touches[0].clientX;
+                    currentItem = item;
+                });
+
+                item.addEventListener('touchmove', (e) => {
+                    if (!currentItem) return;
+                    currentX = e.touches[0].clientX;
+                    const diff = startX - currentX;
+
+                    if (diff > 30) {
+                        // 左滑显示删除按钮
+                        currentItem.classList.add('swiped');
+                    } else if (diff < -30) {
+                        // 右滑隐藏删除按钮
+                        currentItem.classList.remove('swiped');
+                    }
+                });
+
+                item.addEventListener('touchend', () => {
+                    currentItem = null;
+                });
+            });
+
+            // 点击其他地方关闭删除按钮
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.book-item')) {
+                    items.forEach(item => item.classList.remove('swiped'));
+                }
+            });
+        }
+
         // 加载聊天历史
         async function loadChatHistory() {
             const messages = document.getElementById('chatMessages');
@@ -3404,26 +3515,36 @@
                         </div>`;
                     }
                     
-                    // 转义内容用于 onclick
-                    const escapedContent = msg.content.replace(/`/g, '\\`').replace(/'/g, "\\'");
-                    
                     return `
                         <div class="message ${msg.role}">
-                            <div class="message-wrapper">
+                            <div class="message-wrapper" data-content="${msg.content.replace(/"/g, '&quot;')}">
                                 ${msg.role === 'assistant' && msg.model ? `<div class="model-tag">${msg.model}</div>` : ''}
                                 ${pagesHtml}
                                 ${screenshotsHtml}
                                 <div class="message-content">${formatMessage(msg.content)}</div>
-                                <div class="message-actions">
-                                    <button class="action-btn" onclick="copyMessageContent(this, \`${escapedContent.replace(/\n/g, '\\n')}\`)">📋 复制</button>
-                                </div>
                             </div>
                         </div>
                     `;
                 }).join('');
                 
-                // 更新复制按钮可见性
-                updateCopyButtonVisibility();
+                // 添加长按复制功能
+                document.querySelectorAll('.message-wrapper').forEach(wrapper => {
+                    const content = wrapper.dataset.content;
+                    let longPressTimer = null;
+                    wrapper.addEventListener('touchstart', (e) => {
+                        longPressTimer = setTimeout(() => {
+                            navigator.clipboard.writeText(content).then(() => {
+                                showToast('已复制');
+                            });
+                        }, 500);
+                    });
+                    wrapper.addEventListener('touchend', () => {
+                        if (longPressTimer) clearTimeout(longPressTimer);
+                    });
+                    wrapper.addEventListener('touchmove', () => {
+                        if (longPressTimer) clearTimeout(longPressTimer);
+                    });
+                });
             }
             
             scrollToBottom();
@@ -3568,12 +3689,8 @@
                     }
                     // 如果不是 AI 模型，检查是否是协作成员
                     if (modelId === defaultModel && isCollaborative) {
-                        // 从消息中获取成员昵称列表
-                        const messages = document.querySelectorAll('.message.user .user-nickname');
-                        const memberNicknames = new Set();
-                        messages.forEach(el => memberNicknames.add(el.textContent));
-
-                        if (memberNicknames.has(mentionName)) {
+                        // 使用缓存的房间成员列表
+                        if (roomMembers.has(mentionName)) {
                             isMentioningMember = true;
                             mentionedMember = mentionName;
                             actualMessage = atMatch[2];
@@ -3743,64 +3860,25 @@
 
             wrapper.innerHTML = html;
 
-            // 添加操作栏（只在AI消息或最后一条用户消息显示）
-            const actionsDiv = document.createElement('div');
-            actionsDiv.className = 'message-actions';
-            
-            // 复制按钮
-            const copyBtn = document.createElement('button');
-            copyBtn.className = 'action-btn';
-            copyBtn.innerHTML = '📋 复制';
-            copyBtn.onclick = (e) => {
-                e.stopPropagation();
-                copyToClipboard(content, copyBtn);
-            };
-            actionsDiv.appendChild(copyBtn);
-            
-            wrapper.appendChild(actionsDiv);
+            // 添加长按复制功能
+            let longPressTimer = null;
+            wrapper.addEventListener('touchstart', (e) => {
+                longPressTimer = setTimeout(() => {
+                    navigator.clipboard.writeText(content).then(() => {
+                        showToast('已复制');
+                    });
+                }, 500);
+            });
+            wrapper.addEventListener('touchend', () => {
+                if (longPressTimer) clearTimeout(longPressTimer);
+            });
+            wrapper.addEventListener('touchmove', () => {
+                if (longPressTimer) clearTimeout(longPressTimer);
+            });
 
             div.appendChild(wrapper);
             messages.appendChild(div);
             scrollToBottom();
-
-            // 更新之前消息的复制按钮透明度（最新一条保持显示）
-            updateCopyButtonVisibility();
-        }
-
-        // 更新复制按钮可见性
-        function updateCopyButtonVisibility() {
-            const wrappers = document.querySelectorAll('.message-wrapper');
-            wrappers.forEach((wrapper, index) => {
-                const actionsDiv = wrapper.querySelector('.message-actions');
-                if (actionsDiv) {
-                    // 最后一条消息的操作栏始终显示
-                    if (index === wrappers.length - 1) {
-                        actionsDiv.style.opacity = '1';
-                    } else {
-                        actionsDiv.style.opacity = '';
-                    }
-                }
-            });
-        }
-
-        // 复制到剪贴板
-        function copyToClipboard(text, btn) {
-            navigator.clipboard.writeText(text).then(() => {
-                btn.innerHTML = '✓ 已复制';
-                btn.classList.add('copied');
-                setTimeout(() => {
-                    btn.innerHTML = '📋 复制';
-                    btn.classList.remove('copied');
-                }, 2000);
-            }).catch(err => {
-                console.error('复制失败:', err);
-                showToast('复制失败');
-            });
-        }
-
-        // 复制消息内容（用于历史消息）
-        function copyMessageContent(btn, content) {
-            copyToClipboard(content, btn);
         }
 
         // 调用模型API
@@ -4083,20 +4161,12 @@ ${pageContent}
                 html += `<div class="member-avatar" title="${currentUser.nickname} (我)">${avatar}</div>`;
             }
 
-            // 从消息中提取其他成员的昵称
-            const messages = document.querySelectorAll('.message.user');
-            const memberNicknames = new Set();
-            messages.forEach(msg => {
-                const nicknameEl = msg.querySelector('.user-nickname');
-                if (nicknameEl && nicknameEl.textContent !== currentUser?.nickname) {
-                    memberNicknames.add(nicknameEl.textContent);
+            // 从缓存中显示其他成员
+            roomMembers.forEach(nickname => {
+                if (nickname !== currentUser?.nickname) {
+                    const avatar = nickname.charAt(0).toUpperCase();
+                    html += `<div class="member-avatar other" onclick="mentionMember('${nickname}')" title="${nickname}">${avatar}</div>`;
                 }
-            });
-
-            // 显示其他成员
-            memberNicknames.forEach(nickname => {
-                const avatar = nickname.charAt(0).toUpperCase();
-                html += `<div class="member-avatar other" onclick="mentionMember('${nickname}')" title="${nickname}">${avatar}</div>`;
             });
 
             bar.innerHTML = html || '<div class="member-hint">协作对话</div>';
@@ -4494,14 +4564,55 @@ ${pageContent}
 
             // 保存设置
             localStorage.setItem('inputMode', inputMode);
+            
+            // 更新按钮状态
+            updateInputModeButtons();
+        }
+
+        // 切换到语音模式
+        function switchToVoiceMode() {
+            if (inputMode === 'text') {
+                toggleInputMode();
+            }
+        }
+
+        // 切换到文字模式
+        function switchToTextMode() {
+            if (inputMode === 'voice') {
+                toggleInputMode();
+            }
+        }
+
+        // 更新输入模式按钮状态
+        function updateInputModeButtons() {
+            const voiceBtn = document.getElementById('voiceBtn');
+            const textBtn = document.getElementById('textBtn');
+            
+            if (voiceBtn && textBtn) {
+                if (inputMode === 'voice') {
+                    voiceBtn.classList.add('active');
+                    textBtn.classList.remove('active');
+                } else {
+                    voiceBtn.classList.remove('active');
+                    textBtn.classList.add('active');
+                }
+            }
         }
 
         // 加载输入模式设置
         function loadInputMode() {
             const saved = localStorage.getItem('inputMode');
             if (saved === 'text') {
-                toggleInputMode();
+                inputMode = 'text';
+                const voiceMode = document.getElementById('voiceMode');
+                const textMode = document.getElementById('textMode');
+                const switchIcon = document.getElementById('modeSwitchIcon');
+                if (voiceMode) voiceMode.style.display = 'none';
+                if (textMode) textMode.style.display = 'flex';
+                if (switchIcon) switchIcon.textContent = '🎤';
             }
+            // 更新按钮状态
+            updateInputModeButtons();
         }
 
         // 滚动到底部
