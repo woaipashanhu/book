@@ -2023,6 +2023,17 @@
                         user_id: currentUser.id,
                         role: 'owner'
                     }]);
+                } else {
+                    // 房间已存在，加载房间信息
+                    const { data: existingRoom, error: roomError } = await supabaseClient
+                        .from('rooms')
+                        .select('*')
+                        .eq('id', roomId)
+                        .single();
+
+                    if (!roomError && existingRoom) {
+                        currentRoom = existingRoom;
+                    }
                 }
 
                 // 创建邀请码
@@ -2059,10 +2070,13 @@
                     key: currentRoom.api_key
                 };
 
+                // 加载历史消息
+                await loadCloudMessages();
+
                 // 订阅实时消息
                 subscribeToMessages();
 
-                console.log('已进入协作模式，消息将同步到云端');
+                console.log('已进入协作模式，消息将同步到云端', { currentRoom: currentRoom?.id, isCollaborative });
             } catch (error) {
                 console.error('创建邀请链接异常:', error);
                 showToast('创建邀请链接失败: ' + error.message);
@@ -2290,7 +2304,11 @@
 
         // 保存消息到云端
         async function saveMessageToCloud(role, content, model = null, pages = null) {
-            if (!currentRoom || !isCollaborative) return;
+            console.log('saveMessageToCloud 被调用:', { currentRoom: currentRoom?.id, isCollaborative, currentUser: currentUser?.id });
+            if (!currentRoom || !isCollaborative) {
+                console.log('saveMessageToCloud 条件不满足，跳过保存');
+                return;
+            }
 
             const { data, error } = await supabaseClient
                 .from('messages')
@@ -2307,6 +2325,8 @@
 
             if (error) {
                 console.error('保存消息失败:', error);
+            } else {
+                console.log('消息保存成功:', data);
             }
 
             return data;
@@ -3286,11 +3306,14 @@
 
                 // 添加用户消息（不传screenshots，避免重复显示）
                 addMessageToUI('user', actualMessage, null, requestedPages, null, currentUser?.nickname);
-                
+
                 // 协作模式保存到云端
+                console.log('发送消息时状态:', { isCollaborative, currentUser: currentUser?.id, currentRoom: currentRoom?.id });
                 if (isCollaborative && currentUser) {
+                    console.log('保存用户消息到云端...');
                     await saveMessageToCloud('user', actualMessage, null, requestedPages);
                 } else {
+                    console.log('保存用户消息到本地...');
                     await saveChatMessage('user', actualMessage, null, requestedPages, screenshots);
                 }
 
