@@ -743,6 +743,44 @@
             z-index: 50;
         }
 
+        .nav-divider {
+            height: 1px;
+            background: #444;
+            margin: 4px 0;
+        }
+
+        #modelIconsNav {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        #modelIconsNav .model-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid #444;
+            background: #0f0f1a;
+        }
+
+        #modelIconsNav .model-icon:hover {
+            transform: scale(1.1);
+            border-color: #6c5ce7;
+        }
+
+        #modelIconsNav .model-icon.active {
+            border-color: #6c5ce7;
+            background: #6c5ce7;
+            color: white;
+        }
+
         .nav-btn {
             width: 40px;
             height: 40px;
@@ -776,6 +814,35 @@
             padding: 8px 15px;
             background: #1a1a2e;
             border-top: 1px solid #333;
+        }
+
+        .member-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+            background: #6c5ce7;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .member-avatar:hover {
+            transform: scale(1.1);
+        }
+
+        .member-avatar.other {
+            background: #00b894;
+        }
+
+        .member-hint {
+            font-size: 12px;
+            color: #888;
+            padding: 8px 0;
         }
 
         .model-icon {
@@ -1543,18 +1610,6 @@
             </div>
         </div>
 
-        <!-- 对话页面 -->
-        <div class="page" id="chatsPage">
-            <div class="page-header">
-                <h1>💬 对话</h1>
-            </div>
-            <div class="page-content">
-                <div class="chat-list" id="chatList">
-                    <!-- 对话列表 -->
-                </div>
-            </div>
-        </div>
-
         <!-- 我的页面 -->
         <div class="page" id="minePage">
             <div class="page-header">
@@ -1666,10 +1721,6 @@
                 <span class="icon">📚</span>
                 <span class="label">书籍</span>
             </div>
-            <div class="nav-item" onclick="switchPage('chats')">
-                <span class="icon">💬</span>
-                <span class="label">对话</span>
-            </div>
             <div class="nav-item" onclick="switchPage('mine')">
                 <span class="icon">👤</span>
                 <span class="label">我的</span>
@@ -1738,8 +1789,13 @@
                 </div>
             </div>
 
-            <!-- 导航按钮 -->
+            <!-- 导航按钮和模型图标 -->
             <div class="nav-buttons" id="navButtons" style="display:none;">
+                <!-- 模型图标区域（动态生成） -->
+                <div id="modelIconsNav"></div>
+                <!-- 分隔线 -->
+                <div class="nav-divider"></div>
+                <!-- 上下导航按钮 -->
                 <button class="nav-btn" onclick="navigateToPrevAI()" title="上一段AI对话">▲</button>
                 <button class="nav-btn" onclick="navigateToNextAI()" title="下一段AI对话">▼</button>
             </div>
@@ -2210,6 +2266,9 @@
 
             // 订阅实时消息
             subscribeToMessages();
+
+            // 更新导航按钮显示
+            setTimeout(updateNavButtonsVisibility, 500);
         }
 
         // 同步本地历史消息到云端
@@ -2618,18 +2677,14 @@
             console.log('switchPage 被调用，参数:', page);
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            
+
             if (page === 'books') {
                 document.getElementById('booksPage').classList.add('active');
                 document.querySelectorAll('.nav-item')[0].classList.add('active');
                 loadBooks();
-            } else if (page === 'chats') {
-                document.getElementById('chatsPage').classList.add('active');
-                document.querySelectorAll('.nav-item')[1].classList.add('active');
-                loadChats();
             } else if (page === 'mine') {
                 document.getElementById('minePage').classList.add('active');
-                document.querySelectorAll('.nav-item')[2].classList.add('active');
+                document.querySelectorAll('.nav-item')[1].classList.add('active');
             }
         }
 
@@ -3042,16 +3097,30 @@
 
             document.getElementById('chatBookTitle').textContent = currentBook.name;
 
-            // 加载PDF
-            const arrayBuffer = base64ToArrayBuffer(currentBook.data);
-            pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-            totalPages = pdfDoc.numPages;
-            pageTexts = currentBook.texts;
+            // 根据文件类型加载
+            pdfDoc = null;  // 重置 pdfDoc
             pageCanvases = {};
             currentPage = 1;
             oneTimeModel = null; // 重置一次性模型
 
-            document.getElementById('pageIndicator').textContent = `第1页 / 共${totalPages}页`;
+            if (currentBook.type === 'pdf') {
+                // PDF 文件：加载 PDF 文档
+                const arrayBuffer = base64ToArrayBuffer(currentBook.data);
+                pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                totalPages = pdfDoc.numPages;
+                pageTexts = currentBook.texts;
+                document.getElementById('pageIndicator').textContent = `第1页 / 共${totalPages}页`;
+            } else if (currentBook.type === 'word') {
+                // Word 文件：只有文本，没有 PDF
+                totalPages = currentBook.pages || Object.keys(currentBook.texts || {}).length;
+                pageTexts = currentBook.texts || {};
+                document.getElementById('pageIndicator').textContent = `共${totalPages}页`;
+            } else if (currentBook.type === 'image') {
+                // 图片文件：只有文本，没有 PDF
+                totalPages = currentBook.pages || Object.keys(currentBook.texts || {}).length;
+                pageTexts = currentBook.texts || {};
+                document.getElementById('pageIndicator').textContent = `共${totalPages}页`;
+            }
 
             // 显示聊天视图
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -3364,13 +3433,30 @@
 
                 // 2. 检查是否有 @ 提及（优先级最高）
                 const atMatch = message.match(/@([^\s]+)\s*(.*)/);
+                let isMentioningMember = false;  // 是否 @了协作成员（非 AI）
+                let mentionedMember = null;
+
                 if (atMatch) {
-                    const modelName = atMatch[1];
+                    const mentionName = atMatch[1];
+                    // 先检查是否是 AI 模型
                     for (const [id, config] of Object.entries(models)) {
-                        if (modelName.includes(config.name) || config.name.includes(modelName)) {
+                        if (mentionName.includes(config.name) || config.name.includes(mentionName)) {
                             modelId = id;
                             actualMessage = atMatch[2];
                             break;
+                        }
+                    }
+                    // 如果不是 AI 模型，检查是否是协作成员
+                    if (modelId === defaultModel && isCollaborative) {
+                        // 从消息中获取成员昵称列表
+                        const messages = document.querySelectorAll('.message.user .user-nickname');
+                        const memberNicknames = new Set();
+                        messages.forEach(el => memberNicknames.add(el.textContent));
+
+                        if (memberNicknames.has(mentionName)) {
+                            isMentioningMember = true;
+                            mentionedMember = mentionName;
+                            actualMessage = atMatch[2];
                         }
                     }
                 }
@@ -3407,6 +3493,17 @@
 
                 input.value = '';
                 input.style.height = 'auto';
+
+                // 如果是 @成员（非 AI），不调用 AI，只发送消息
+                if (isMentioningMember) {
+                    console.log(`@成员 ${mentionedMember}，不调用 AI`);
+                    showToast(`消息已发送给 @${mentionedMember}`);
+                    oneTimeModel = null;
+                    renderModelIcons();
+                    loadChats();
+                    updateNavButtonsVisibility();
+                    return;
+                }
 
                 // 获取显示的模型名称（协作模式使用房间配置）
                 const displayModelName = isCollaborative && window.collaborativeApiConfig?.provider
@@ -3802,10 +3899,11 @@ ${pageContent}
             });
         }
 
-        // 渲染模型图标栏（只显示非默认模型）
+        // 渲染模型图标栏（只显示已配置API的非默认模型）
         function renderModelIcons() {
-            const bar = document.getElementById('modelIconsBar');
-            if (!bar) return;
+            // 渲染到右侧导航区域
+            const nav = document.getElementById('modelIconsNav');
+            if (!nav) return;
 
             let html = '';
             const modelOrder = ['zhipu', 'deepseek', 'doubao', 'qwen', 'kimi', 'longcat'];
@@ -3814,18 +3912,81 @@ ${pageContent}
                 // 默认模型不显示在图标栏
                 if (id === defaultModel) return;
 
+                // 协作模式使用房间的 API 配置
+                let hasKey = false;
+                if (isCollaborative && window.collaborativeApiConfig?.provider === id) {
+                    hasKey = true;
+                } else if (!isCollaborative) {
+                    const key = localStorage.getItem(`apiKey_${id}`);
+                    hasKey = !!key;
+                }
+
+                // 只显示已配置 API 的模型
+                if (!hasKey) return;
+
                 const m = models[id];
-                const key = localStorage.getItem(`apiKey_${id}`);
-                const hasKey = !!key;
                 const isActive = oneTimeModel === id;
 
-                // 显示所有模型，没有密钥的用透明度区分
-                html += `<div class="model-icon ${id} ${isActive ? 'active' : ''} ${!hasKey ? 'no-key' : ''}" 
-                    onclick="selectModelOnce('${id}')" 
-                    title="${m.name}${!hasKey ? ' (未配置密钥)' : ''}">${m.icon}</div>`;
+                html += `<div class="model-icon ${id} ${isActive ? 'active' : ''}"
+                    onclick="selectModelOnce('${id}')"
+                    title="${m.name}">${m.icon}</div>`;
             });
 
-            bar.innerHTML = html;
+            nav.innerHTML = html;
+
+            // 原来的模型图标栏改成协作成员头像区域
+            const bar = document.getElementById('modelIconsBar');
+            if (bar) {
+                renderMembersBar();
+            }
+        }
+
+        // 渲染协作成员头像栏
+        function renderMembersBar() {
+            const bar = document.getElementById('modelIconsBar');
+            if (!bar) return;
+
+            // 非协作模式不显示
+            if (!isCollaborative || !currentRoom) {
+                bar.style.display = 'none';
+                return;
+            }
+
+            bar.style.display = 'flex';
+
+            // 获取房间成员（从云端或本地缓存）
+            let html = '';
+
+            // 显示当前用户
+            if (currentUser?.nickname) {
+                const avatar = currentUser.nickname.charAt(0).toUpperCase();
+                html += `<div class="member-avatar" title="${currentUser.nickname} (我)">${avatar}</div>`;
+            }
+
+            // 从消息中提取其他成员的昵称
+            const messages = document.querySelectorAll('.message.user');
+            const memberNicknames = new Set();
+            messages.forEach(msg => {
+                const nicknameEl = msg.querySelector('.user-nickname');
+                if (nicknameEl && nicknameEl.textContent !== currentUser?.nickname) {
+                    memberNicknames.add(nicknameEl.textContent);
+                }
+            });
+
+            // 显示其他成员
+            memberNicknames.forEach(nickname => {
+                const avatar = nickname.charAt(0).toUpperCase();
+                html += `<div class="member-avatar other" onclick="mentionMember('${nickname}')" title="${nickname}">${avatar}</div>`;
+            });
+
+            bar.innerHTML = html || '<div class="member-hint">协作对话</div>';
+        }
+
+        // @成员
+        function mentionMember(nickname) {
+            const input = document.getElementById('promptInput');
+            input.value = `@${nickname} `;
+            input.focus();
         }
 
         // 一次性选择模型（回答完自动切回默认）
