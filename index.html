@@ -2049,6 +2049,20 @@
                 const inviteLink = `${window.location.origin}${window.location.pathname}?invite=${inviteCode}&sb_url=${encodedSbUrl}&sb_key=${encodedSbKey}`;
                 document.getElementById('inviteLink').textContent = inviteLink;
                 document.getElementById('inviteModal').classList.add('show');
+
+                // 创建者进入协作模式，消息同步到云端
+                isCollaborative = true;
+
+                // 设置协作 API 配置
+                window.collaborativeApiConfig = {
+                    provider: currentRoom.api_provider,
+                    key: currentRoom.api_key
+                };
+
+                // 订阅实时消息
+                subscribeToMessages();
+
+                console.log('已进入协作模式，消息将同步到云端');
             } catch (error) {
                 console.error('创建邀请链接异常:', error);
                 showToast('创建邀请链接失败: ' + error.message);
@@ -3283,11 +3297,16 @@
                 input.value = '';
                 input.style.height = 'auto';
 
+                // 获取显示的模型名称（协作模式使用房间配置）
+                const displayModelName = isCollaborative && window.collaborativeApiConfig?.provider
+                    ? (models[window.collaborativeApiConfig.provider]?.name || window.collaborativeApiConfig.provider)
+                    : models[modelId].name;
+
                 // 显示加载状态
                 const loadingDiv = document.createElement('div');
                 loadingDiv.className = 'message assistant';
                 loadingDiv.innerHTML = `
-                    <div class="model-tag">${models[modelId].name}</div>
+                    <div class="model-tag">${displayModelName}</div>
                     <div class="message-loading">
                         <span></span><span></span><span></span>
                     </div>
@@ -3318,11 +3337,16 @@
 
                 loadingDiv.remove();
 
-                addMessageToUI('assistant', response, models[modelId].name);
-                
+                // 获取显示的模型名称（协作模式使用房间配置）
+                const responseModelName = isCollaborative && window.collaborativeApiConfig?.provider
+                    ? (models[window.collaborativeApiConfig.provider]?.name || window.collaborativeApiConfig.provider)
+                    : models[modelId].name;
+
+                addMessageToUI('assistant', response, responseModelName);
+
                 // 协作模式保存到云端
                 if (isCollaborative && currentUser) {
-                    await saveMessageToCloud('assistant', response, models[modelId].name, pagesToUse);
+                    await saveMessageToCloud('assistant', response, responseModelName, pagesToUse);
                 } else {
                     await saveChatMessage('assistant', response, models[modelId].name);
                 }
