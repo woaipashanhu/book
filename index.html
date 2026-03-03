@@ -2245,11 +2245,20 @@
             div.className = `message ${msg.role}`;
             div.dataset.messageId = msg.id;
 
-            const escapedContent = msg.content.replace(/`/g, '\\`').replace(/'/g, "\\'");
             const wrapper = document.createElement('div');
             wrapper.className = 'message-wrapper';
             
             let html = '';
+            
+            // 用户消息显示头像和昵称
+            if (msg.role === 'user' && msg.nickname) {
+                const avatarText = msg.nickname.charAt(0).toUpperCase();
+                html += `<div class="message-header">
+                    <div class="user-avatar user">${avatarText}</div>
+                    <span class="user-nickname">${msg.nickname}</span>
+                </div>`;
+            }
+            
             if (msg.role === 'assistant' && msg.model) {
                 html += `<div class="model-tag">${msg.model}</div>`;
             }
@@ -2318,7 +2327,8 @@
                     role: role,
                     content: content,
                     model: model,
-                    pages: pages
+                    pages: pages,
+                    nickname: role === 'user' ? currentUser?.nickname : null
                 }])
                 .select()
                 .single();
@@ -3304,15 +3314,19 @@
                     showPdfPreview(requestedPages);
                 }
 
-                // 添加用户消息（不传screenshots，避免重复显示）
-                addMessageToUI('user', actualMessage, null, requestedPages, null, currentUser?.nickname);
-
                 // 协作模式保存到云端
                 console.log('发送消息时状态:', { isCollaborative, currentUser: currentUser?.id, currentRoom: currentRoom?.id });
+                let savedUserMsg = null;
                 if (isCollaborative && currentUser) {
                     console.log('保存用户消息到云端...');
-                    await saveMessageToCloud('user', actualMessage, null, requestedPages);
+                    savedUserMsg = await saveMessageToCloud('user', actualMessage, null, requestedPages);
+                    // 用云端返回的消息添加到UI（有messageId，避免Realtime重复）
+                    if (savedUserMsg) {
+                        addCloudMessageToUI({ ...savedUserMsg, nickname: currentUser?.nickname });
+                    }
                 } else {
+                    // 本地模式：直接添加到UI
+                    addMessageToUI('user', actualMessage, null, requestedPages, null, currentUser?.nickname);
                     console.log('保存用户消息到本地...');
                     await saveChatMessage('user', actualMessage, null, requestedPages, screenshots);
                 }
@@ -3365,12 +3379,16 @@
                     ? (models[window.collaborativeApiConfig.provider]?.name || window.collaborativeApiConfig.provider)
                     : models[modelId].name;
 
-                addMessageToUI('assistant', response, responseModelName);
-
                 // 协作模式保存到云端
                 if (isCollaborative && currentUser) {
-                    await saveMessageToCloud('assistant', response, responseModelName, pagesToUse);
+                    const savedAiMsg = await saveMessageToCloud('assistant', response, responseModelName, pagesToUse);
+                    // 用云端返回的消息添加到UI（有messageId，避免Realtime重复）
+                    if (savedAiMsg) {
+                        addCloudMessageToUI(savedAiMsg);
+                    }
                 } else {
+                    // 本地模式：直接添加到UI
+                    addMessageToUI('assistant', response, responseModelName);
                     await saveChatMessage('assistant', response, models[modelId].name);
                 }
 
