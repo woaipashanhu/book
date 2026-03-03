@@ -2070,6 +2070,20 @@
                     key: currentRoom.api_key
                 };
 
+                // 同步本地历史消息到云端
+                await syncLocalMessagesToCloud();
+
+                // 保存协作对话到本地（让 A 也能看到自己创建的协作对话）
+                saveInvitedChat({
+                    roomId: currentRoom.id,
+                    roomName: currentBook.name,
+                    inviterId: currentUser.id,
+                    sbUrl: localStorage.getItem('supabaseUrl'),
+                    sbKey: localStorage.getItem('supabaseKey'),
+                    joinedAt: new Date().toISOString(),
+                    isOwner: true
+                });
+
                 // 加载历史消息
                 await loadCloudMessages();
 
@@ -2193,9 +2207,62 @@
 
             // 加载云端消息
             await loadCloudMessages();
-            
+
             // 订阅实时消息
             subscribeToMessages();
+        }
+
+        // 同步本地历史消息到云端
+        async function syncLocalMessagesToCloud() {
+            if (!currentBook || !currentRoom) return;
+
+            try {
+                // 获取本地历史消息
+                const chat = await getChatByBookId(currentBook.id);
+                const localMessages = chat?.messages || [];
+                
+                if (localMessages.length === 0) {
+                    console.log('没有本地消息需要同步');
+                    return;
+                }
+
+                console.log(`准备同步 ${localMessages.length} 条本地消息到云端`);
+
+                // 检查云端是否已有消息（避免重复同步）
+                const { data: existingMsgs } = await supabaseClient
+                    .from('messages')
+                    .select('id')
+                    .eq('room_id', currentRoom.id)
+                    .limit(1);
+
+                if (existingMsgs && existingMsgs.length > 0) {
+                    console.log('云端已有消息，跳过同步');
+                    return;
+                }
+
+                // 批量上传本地消息
+                const messagesToUpload = localMessages.map(msg => ({
+                    room_id: currentRoom.id,
+                    user_id: msg.role === 'user' ? currentUser?.id : null,
+                    role: msg.role,
+                    content: msg.content,
+                    model: msg.model,
+                    pages: msg.pages,
+                    nickname: msg.role === 'user' ? currentUser?.nickname : null
+                }));
+
+                const { error } = await supabaseClient
+                    .from('messages')
+                    .insert(messagesToUpload);
+
+                if (error) {
+                    console.error('同步消息失败:', error);
+                } else {
+                    console.log(`成功同步 ${messagesToUpload.length} 条消息到云端`);
+                }
+            } catch (e) {
+                console.error('同步本地消息异常:', e);
+            }
         }
 
         // 加载云端消息
@@ -2656,7 +2723,7 @@
                     <button class="delete-btn" onclick="removeInvitedChatUI(event, '${chat.roomId}')">×</button>
                     <div class="book-icon">📄</div>
                     <div class="book-info">
-                        <div class="book-name">${chat.roomName}<span class="inviter-tag">被邀请</span></div>
+                        <div class="book-name">${chat.roomName}<span class="inviter-tag">${chat.isOwner ? '我创建' : '被邀请'}</span></div>
                         <div class="book-meta">${chat.valid ? '点击进入' : '房间已失效'}</div>
                     </div>
                 </div>
