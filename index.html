@@ -222,6 +222,25 @@
             background: #252540;
         }
 
+        .book-item.expired {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .book-item.expired .book-name::after {
+            content: ' (已失效)';
+            color: #ff4757;
+        }
+
+        .book-item .inviter-tag {
+            font-size: 11px;
+            color: #6c5ce7;
+            background: rgba(108, 92, 231, 0.2);
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-left: 8px;
+        }
+
         .book-item .book-icon {
             font-size: 32px;
         }
@@ -1509,8 +1528,14 @@
                         <div class="upload-btn-hint">相册 / 拍照</div>
                     </div>
                 </div>
+                <div class="books-list" id="invitedChatsSection" style="display:none;">
+                    <div class="books-list-title">被邀请对话</div>
+                    <div id="invitedChatsList">
+                        <!-- 被邀请的对话列表 -->
+                    </div>
+                </div>
                 <div class="books-list">
-                    <div class="books-list-title">我的书籍</div>
+                    <div class="books-list-title">我的对话</div>
                     <div id="booksList">
                         <!-- 书籍列表 -->
                     </div>
@@ -1750,6 +1775,8 @@
         let currentRoom = null;
         let isCollaborative = false;
         let pendingInviteCode = null;  // 待处理的邀请码
+        let pendingSupabaseConfig = null;  // 待处理的Supabase配置（从URL获取）
+        let invitedChats = [];  // 被邀请的对话列表
         
         console.log('全局变量定义完成');
 
@@ -1783,16 +1810,30 @@
                 localStorage.setItem('userId', currentUser.id);
             }
 
-            // 检查URL中的邀请码
+            // 检查URL中的邀请码和Supabase配置
             const urlParams = new URLSearchParams(window.location.search);
             const inviteCode = urlParams.get('invite');
-            if (inviteCode) {
+            const sbUrl = urlParams.get('sb_url');
+            const sbKey = urlParams.get('sb_key');
+
+            if (inviteCode && sbUrl && sbKey) {
+                // 有邀请链接，临时使用URL中的Supabase配置
                 pendingInviteCode = inviteCode;
-                if (supabaseConfigured) {
-                    showInviteJoinOverlay();
-                } else {
-                    showToast('请先在"我的"页面配置Supabase');
+                pendingSupabaseConfig = { url: sbUrl, key: sbKey };
+
+                // 临时初始化Supabase（不保存到本地）
+                try {
+                    supabaseClient = window.supabase.createClient(sbUrl, sbKey);
+                    supabaseConfigured = true;
+                    console.log('临时Supabase已配置');
+                } catch (e) {
+                    console.error('临时Supabase配置失败:', e);
+                    showToast('邀请链接无效');
+                    return;
                 }
+
+                // 显示邀请加入界面
+                showInviteJoinOverlay();
             }
         }
 
@@ -2000,8 +2041,12 @@
                     return;
                 }
 
-                // 显示邀请链接
-                const inviteLink = `${window.location.origin}${window.location.pathname}?invite=${inviteCode}`;
+                // 显示邀请链接（包含Supabase配置）
+                const sbUrl = localStorage.getItem('supabaseUrl');
+                const sbKey = localStorage.getItem('supabaseKey');
+                const encodedSbUrl = encodeURIComponent(sbUrl);
+                const encodedSbKey = encodeURIComponent(sbKey);
+                const inviteLink = `${window.location.origin}${window.location.pathname}?invite=${inviteCode}&sb_url=${encodedSbUrl}&sb_key=${encodedSbKey}`;
                 document.getElementById('inviteLink').textContent = inviteLink;
                 document.getElementById('inviteModal').classList.add('show');
             } catch (error) {
@@ -2042,30 +2087,29 @@
                 return false;
             }
 
-            if (invite.used) {
-                showToast('邀请码已被使用');
-                return false;
-            }
-
-            // 加入房间
-            const { error: memberError } = await supabase
+            // 检查是否已经是成员
+            const { data: existingMember } = await supabaseClient
                 .from('room_members')
-                .insert([{
-                    room_id: invite.room_id,
-                    user_id: currentUser.id,
-                    role: 'member'
-                }]);
+                .select('*')
+                .eq('room_id', invite.room_id)
+                .eq('user_id', currentUser.id)
+                .single();
 
-            if (memberError) {
-                showToast('加入对话失败');
-                return false;
+            if (!existingMember) {
+                // 不是成员，需要加入
+                const { error: memberError } = await supabaseClient
+                    .from('room_members')
+                    .insert([{
+                        room_id: invite.room_id,
+                        user_id: currentUser.id,
+                        role: 'member'
+                    }]);
+
+                if (memberError) {
+                    // 可能是唯一约束冲突，忽略
+                    console.log('加入房间时出错:', memberError);
+                }
             }
-
-            // 标记邀请码已使用
-            await supabaseClient
-                .from('invite_codes')
-                .update({ used: true, used_by: currentUser.id })
-                .eq('id', invite.id);
 
             // 设置当前房间
             currentRoom = invite.rooms;
@@ -2073,12 +2117,21 @@
 
             // 如果房间有API配置，临时使用房间的API（不保存到本地）
             if (currentRoom.api_provider && currentRoom.api_key) {
-                // 标记使用协作房间的API
                 window.collaborativeApiConfig = {
                     provider: currentRoom.api_provider,
                     key: currentRoom.api_key
                 };
             }
+
+            // 保存被邀请的对话到本地（用于下次访问时显示）
+            saveInvitedChat({
+                roomId: currentRoom.id,
+                roomName: currentRoom.book_name || currentRoom.name,
+                inviterId: invite.created_by,
+                sbUrl: pendingSupabaseConfig?.url || localStorage.getItem('supabaseUrl'),
+                sbKey: pendingSupabaseConfig?.key || localStorage.getItem('supabaseKey'),
+                joinedAt: new Date().toISOString()
+            });
 
             showToast('已加入协作对话！');
             
@@ -2462,11 +2515,45 @@
             }
         }
 
+        // ========== 被邀请对话管理 ==========
+
+        // 保存被邀请的对话到本地
+        function saveInvitedChat(chatInfo) {
+            let invitedChats = JSON.parse(localStorage.getItem('invitedChats') || '[]');
+
+            // 检查是否已存在（避免重复）
+            const existingIndex = invitedChats.findIndex(c => c.roomId === chatInfo.roomId);
+            if (existingIndex >= 0) {
+                invitedChats[existingIndex] = chatInfo; // 更新
+            } else {
+                invitedChats.push(chatInfo); // 添加
+            }
+
+            localStorage.setItem('invitedChats', JSON.stringify(invitedChats));
+        }
+
+        // 加载被邀请的对话列表
+        function loadInvitedChats() {
+            const chats = JSON.parse(localStorage.getItem('invitedChats') || '[]');
+            return chats;
+        }
+
+        // 删除被邀请的对话
+        function removeInvitedChat(roomId) {
+            let invitedChats = JSON.parse(localStorage.getItem('invitedChats') || '[]');
+            invitedChats = invitedChats.filter(c => c.roomId !== roomId);
+            localStorage.setItem('invitedChats', JSON.stringify(invitedChats));
+        }
+
         // 加载书籍列表
         async function loadBooks() {
+            // 加载被邀请的对话列表
+            await loadInvitedChatsUI();
+
+            // 加载我的书籍
             const books = await getAllBooks();
             const list = document.getElementById('booksList');
-            
+
             if (books.length === 0) {
                 list.innerHTML = `
                     <div class="empty-state">
@@ -2487,6 +2574,112 @@
                     </div>
                 </div>
             `).join('');
+        }
+
+        // 加载被邀请对话的UI
+        async function loadInvitedChatsUI() {
+            const invitedChats = loadInvitedChats();
+            const section = document.getElementById('invitedChatsSection');
+            const list = document.getElementById('invitedChatsList');
+
+            if (invitedChats.length === 0) {
+                section.style.display = 'none';
+                return;
+            }
+
+            section.style.display = 'block';
+
+            // 检查每个房间是否还有效
+            const validChats = [];
+            for (const chat of invitedChats) {
+                const isValid = await checkRoomValid(chat);
+                if (isValid) {
+                    validChats.push({ ...chat, valid: true });
+                } else {
+                    validChats.push({ ...chat, valid: false });
+                }
+            }
+
+            list.innerHTML = validChats.map(chat => `
+                <div class="book-item ${chat.valid ? '' : 'expired'}" onclick="${chat.valid ? `enterInvitedChat('${chat.roomId}')` : ''}">
+                    <button class="delete-btn" onclick="removeInvitedChatUI(event, '${chat.roomId}')">×</button>
+                    <div class="book-icon">📄</div>
+                    <div class="book-info">
+                        <div class="book-name">${chat.roomName}<span class="inviter-tag">被邀请</span></div>
+                        <div class="book-meta">${chat.valid ? '点击进入' : '房间已失效'}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 检查房间是否有效
+        async function checkRoomValid(chat) {
+            try {
+                // 临时创建 Supabase 客户端
+                const tempClient = window.supabase.createClient(chat.sbUrl, chat.sbKey);
+                const { data, error } = await tempClient
+                    .from('rooms')
+                    .select('id')
+                    .eq('id', chat.roomId)
+                    .single();
+                return !error && data;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        // 进入被邀请的对话
+        async function enterInvitedChat(roomId) {
+            const invitedChats = loadInvitedChats();
+            const chat = invitedChats.find(c => c.roomId === roomId);
+            if (!chat) {
+                showToast('对话不存在');
+                return;
+            }
+
+            // 临时使用该对话的 Supabase 配置
+            try {
+                supabaseClient = window.supabase.createClient(chat.sbUrl, chat.sbKey);
+                supabaseConfigured = true;
+                isCollaborative = true;
+
+                // 获取房间信息
+                const { data: room, error } = await supabaseClient
+                    .from('rooms')
+                    .select('*')
+                    .eq('id', roomId)
+                    .single();
+
+                if (error || !room) {
+                    showToast('房间不存在或已失效');
+                    return;
+                }
+
+                currentRoom = room;
+
+                // 设置 API 配置
+                if (currentRoom.api_provider && currentRoom.api_key) {
+                    window.collaborativeApiConfig = {
+                        provider: currentRoom.api_provider,
+                        key: currentRoom.api_key
+                    };
+                }
+
+                // 加载协作房间
+                await loadCollaborativeRoom();
+
+            } catch (e) {
+                console.error('进入被邀请对话失败:', e);
+                showToast('进入对话失败');
+            }
+        }
+
+        // 删除被邀请的对话（UI）
+        function removeInvitedChatUI(event, roomId) {
+            event.stopPropagation();
+            removeInvitedChat(roomId);
+            loadBooks();
+            showToast('已移除');
         }
 
         // 加载对话列表
@@ -2844,6 +3037,27 @@
             currentBook = null;
             pdfDoc = null;
             hidePdfPreview();
+
+            // 清除协作模式的临时配置
+            if (isCollaborative) {
+                // 清除临时的 Supabase 客户端
+                supabaseClient = null;
+                supabaseConfigured = false;
+                window.collaborativeApiConfig = null;
+
+                // 恢复用户自己的 Supabase 配置（如果有）
+                const mySbUrl = localStorage.getItem('supabaseUrl');
+                const mySbKey = localStorage.getItem('supabaseKey');
+                if (mySbUrl && mySbKey) {
+                    try {
+                        supabaseClient = window.supabase.createClient(mySbUrl, mySbKey);
+                        supabaseConfigured = true;
+                    } catch (e) {
+                        console.error('恢复Supabase配置失败:', e);
+                    }
+                }
+            }
+
             isCollaborative = false;
             currentRoom = null;
         }
