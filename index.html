@@ -3378,9 +3378,9 @@
                 // 解析页码
                 const requestedPages = parsePages(message);
 
-                // 生成页面截图（高分辨率）
+                // 生成页面截图（高分辨率）- 仅在有 pdfDoc 时（非协作模式或本地有PDF）
                 let screenshots = [];
-                if (requestedPages.length > 0) {
+                if (requestedPages.length > 0 && pdfDoc) {
                     for (const pageNum of requestedPages) {
                         const canvas = await renderPageToCanvas(pageNum, 1.5);
                         screenshots.push(canvas.toDataURL('image/jpeg', 0.9));
