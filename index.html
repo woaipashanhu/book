@@ -268,6 +268,14 @@
             color: white;
             font-size: 14px;
             cursor: pointer;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .book-item.swiped .book-item-delete {
+            opacity: 1;
+            pointer-events: auto;
         }
 
         .book-item.expired {
@@ -1060,10 +1068,13 @@
         /* 语音输入模式 */
         .voice-input-mode {
             flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .voice-input-btn {
-            width: 100%;
+            flex: 1;
             height: 44px;
             background: var(--bg-tertiary);
             border-radius: 22px;
@@ -1101,7 +1112,7 @@
             flex: 1;
             display: flex;
             align-items: flex-end;
-            gap: 10px;
+            gap: 8px;
         }
 
         .input-wrapper {
@@ -1909,6 +1920,9 @@
                     <div class="voice-input-btn" id="voiceInputBtn">
                         <span class="voice-btn-text">按住 说话</span>
                     </div>
+                    <!-- 语音模式下显示打字按钮和导出按钮 -->
+                    <button class="action-circle-btn" id="showTextBtn" onclick="switchToTextMode()" title="文字输入">⌨️</button>
+                    <button class="action-circle-btn" onclick="exportChatToWord()" title="导出Word">📄</button>
                 </div>
                 <!-- 打字模式 -->
                 <div class="text-input-mode" id="textMode" style="display: none;">
@@ -1916,11 +1930,8 @@
                         <textarea id="promptInput" placeholder="输入消息..." rows="1" oninput="handleInput(event)"></textarea>
                     </div>
                     <button id="sendBtn" onclick="sendMessage()">发送</button>
-                </div>
-                <!-- 功能按钮组 -->
-                <div class="action-btns-group">
-                    <button class="action-circle-btn active" id="voiceBtn" onclick="switchToVoiceMode()" title="语音输入">🎤</button>
-                    <button class="action-circle-btn" id="textBtn" onclick="switchToTextMode()" title="文字输入">⌨️</button>
+                    <!-- 打字模式下显示语音按钮和导出按钮 -->
+                    <button class="action-circle-btn" id="showVoiceBtn" onclick="switchToVoiceMode()" title="语音输入">🎤</button>
                     <button class="action-circle-btn" onclick="exportChatToWord()" title="导出Word">📄</button>
                 </div>
             </div>
@@ -2539,12 +2550,11 @@
             
             let html = '';
             
-            // 用户消息显示头像和昵称
+            // 用户消息显示头像（只显示首字母头像，不显示昵称文字）
             if (msg.role === 'user' && msg.nickname) {
                 const avatarText = msg.nickname.charAt(0).toUpperCase();
                 html += `<div class="message-header">
-                    <div class="user-avatar user">${avatarText}</div>
-                    <span class="user-nickname">${msg.nickname}</span>
+                    <div class="user-avatar user" title="${msg.nickname}">${avatarText}</div>
                 </div>`;
             }
             
@@ -3679,21 +3689,19 @@
 
                 if (atMatch) {
                     const mentionName = atMatch[1];
-                    // 先检查是否是 AI 模型
-                    for (const [id, config] of Object.entries(models)) {
-                        if (mentionName.includes(config.name) || config.name.includes(mentionName)) {
-                            modelId = id;
-                            actualMessage = atMatch[2];
-                            break;
-                        }
-                    }
-                    // 如果不是 AI 模型，检查是否是协作成员
-                    if (modelId === defaultModel && isCollaborative) {
-                        // 使用缓存的房间成员列表
-                        if (roomMembers.has(mentionName)) {
-                            isMentioningMember = true;
-                            mentionedMember = mentionName;
-                            actualMessage = atMatch[2];
+                    // 先检查是否是协作成员（优先级高于AI模型）
+                    if (isCollaborative && roomMembers.has(mentionName)) {
+                        isMentioningMember = true;
+                        mentionedMember = mentionName;
+                        actualMessage = atMatch[2];
+                    } else {
+                        // 再检查是否是 AI 模型（精确匹配）
+                        for (const [id, config] of Object.entries(models)) {
+                            if (mentionName === config.name || mentionName === id) {
+                                modelId = id;
+                                actualMessage = atMatch[2];
+                                break;
+                            }
                         }
                     }
                 }
@@ -3720,6 +3728,10 @@
                     // 用云端返回的消息添加到UI（有messageId，避免Realtime重复）
                     if (savedUserMsg) {
                         addCloudMessageToUI({ ...savedUserMsg, nickname: currentUser?.nickname });
+                    }
+                    // 把当前用户昵称添加到roomMembers
+                    if (currentUser?.nickname) {
+                        roomMembers.add(currentUser.nickname);
                     }
                 } else {
                     // 本地模式：直接添加到UI
@@ -3836,12 +3848,11 @@
 
             let html = '';
 
-            // 用户消息显示头像和昵称
+            // 用户消息显示头像（只显示首字母头像，不显示昵称文字）
             if (role === 'user' && nickname) {
                 const avatarText = nickname.charAt(0).toUpperCase();
                 html += `<div class="message-header">
-                    <div class="user-avatar user">${avatarText}</div>
-                    <span class="user-nickname">${nickname}</span>
+                    <div class="user-avatar user" title="${nickname}">${avatarText}</div>
                 </div>`;
             }
 
@@ -4548,25 +4559,19 @@ ${pageContent}
         function toggleInputMode() {
             const voiceMode = document.getElementById('voiceMode');
             const textMode = document.getElementById('textMode');
-            const switchIcon = document.getElementById('modeSwitchIcon');
 
             if (inputMode === 'voice') {
                 inputMode = 'text';
                 voiceMode.style.display = 'none';
                 textMode.style.display = 'flex';
-                switchIcon.textContent = '🎤';
             } else {
                 inputMode = 'voice';
-                voiceMode.style.display = 'block';
+                voiceMode.style.display = 'flex';
                 textMode.style.display = 'none';
-                switchIcon.textContent = '⌨️';
             }
 
             // 保存设置
             localStorage.setItem('inputMode', inputMode);
-            
-            // 更新按钮状态
-            updateInputModeButtons();
         }
 
         // 切换到语音模式
@@ -4583,22 +4588,6 @@ ${pageContent}
             }
         }
 
-        // 更新输入模式按钮状态
-        function updateInputModeButtons() {
-            const voiceBtn = document.getElementById('voiceBtn');
-            const textBtn = document.getElementById('textBtn');
-            
-            if (voiceBtn && textBtn) {
-                if (inputMode === 'voice') {
-                    voiceBtn.classList.add('active');
-                    textBtn.classList.remove('active');
-                } else {
-                    voiceBtn.classList.remove('active');
-                    textBtn.classList.add('active');
-                }
-            }
-        }
-
         // 加载输入模式设置
         function loadInputMode() {
             const saved = localStorage.getItem('inputMode');
@@ -4606,13 +4595,9 @@ ${pageContent}
                 inputMode = 'text';
                 const voiceMode = document.getElementById('voiceMode');
                 const textMode = document.getElementById('textMode');
-                const switchIcon = document.getElementById('modeSwitchIcon');
                 if (voiceMode) voiceMode.style.display = 'none';
                 if (textMode) textMode.style.display = 'flex';
-                if (switchIcon) switchIcon.textContent = '🎤';
             }
-            // 更新按钮状态
-            updateInputModeButtons();
         }
 
         // 滚动到底部
